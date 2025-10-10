@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import api from "../api/axios"; // axios instance
 import { useNavigate } from "react-router-dom";
 
 const Auth = () => {
@@ -8,16 +8,15 @@ const Auth = () => {
   const [tab, setTab] = useState("login");
   const [aadhar, setAadhar] = useState("");
   const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false); // New state
+  const [otpSent, setOtpSent] = useState(false);
   const [adminForm, setAdminForm] = useState({ name: "", password: "" });
 
+  // Send OTP
   const handleSendOtp = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post("http://localhost:8000/api/auth/send-otp", {
-        aadharNumber: aadhar,
-      });
+      const res = await api.post("/api/auth/send-otp", { aadharNumber: aadhar });
       alert(res.data.message);
       setOtpSent(true);
     } catch (err) {
@@ -27,14 +26,14 @@ const Auth = () => {
     }
   };
 
+  // Verify OTP
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post("http://localhost:8000/api/auth/verify-otp", {
-        aadharNumber: aadhar,
-        otp,
-      });
+      const res = await api.post("/api/auth/verify-otp", { aadharNumber: aadhar, otp });
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("role", "voter"); // role for dashboard
       alert("Login successful!");
       navigate("/dashboard");
     } catch (err) {
@@ -44,14 +43,21 @@ const Auth = () => {
     }
   };
 
-  const handleAdminLogin = (e) => {
+  // Admin login
+  const handleAdminLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      alert(`Admin logged in..`);
-      setLoading(false);
+    try {
+      const res = await api.post("/api/admin/login", adminForm);
+      localStorage.setItem("adminToken", res.data.token);
+      localStorage.setItem("role", "admin");
+      alert("Admin logged in successfully!");
       navigate("/dashboard");
-    }, 1000);
+    } catch (err) {
+      alert(err.response?.data?.message || "Admin login failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -63,78 +69,30 @@ const Auth = () => {
             🗳️
           </div>
           <h1 className="text-2xl font-bold">Blockchain Voting System</h1>
-          <p className="text-gray-600 text-sm">
-            Secure, Transparent, Tamper-Proof Elections
-          </p>
+          <p className="text-gray-600 text-sm">Secure, Transparent, Tamper-Proof Elections</p>
         </div>
 
         {/* Tabs */}
         <div className="flex mb-6 border-b">
-          <button
-            className={`flex-1 py-2 text-center ${
-              tab === "login"
-                ? "border-b-2 border-blue-600 font-semibold"
-                : "text-gray-500"
-            }`}
-            onClick={() => setTab("login")}
-          >
-            Login
-          </button>
-          <button
-            className={`flex-1 py-2 text-center ${
-              tab === "adminlogin"
-                ? "border-b-2 border-blue-600 font-semibold"
-                : "text-gray-500"
-            }`}
-            onClick={() => setTab("adminlogin")}
-          >
-            Admin Login
-          </button>
+          <button className={`flex-1 py-2 text-center ${tab === "login" ? "border-b-2 border-blue-600 font-semibold" : "text-gray-500"}`} onClick={() => setTab("login")}>Login</button>
+          <button className={`flex-1 py-2 text-center ${tab === "adminlogin" ? "border-b-2 border-blue-600 font-semibold" : "text-gray-500"}`} onClick={() => setTab("adminlogin")}>Admin Login</button>
         </div>
 
-        {/* Aadhaar Login */}
+        {/* Voter Login */}
         {tab === "login" && (
-          <form
-            onSubmit={otpSent ? handleVerifyOtp : handleSendOtp}
-            className="space-y-4"
-          >
+          <form onSubmit={otpSent ? handleVerifyOtp : handleSendOtp} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium">
-                Aadhaar Number
-              </label>
-              <input
-                type="text"
-                value={aadhar}
-                onChange={(e) => (setAadhar(e.target.value))}
-                required
-                disabled={otpSent}
-                className="w-full mt-1 px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
-              />
+              <label className="block text-sm font-medium">Aadhaar Number</label>
+              <input type="text" value={aadhar} onChange={(e) => setAadhar(e.target.value)} required disabled={otpSent} className="w-full mt-1 px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200" />
             </div>
-
             {otpSent && (
               <div>
                 <label className="block text-sm font-medium">Enter OTP</label>
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={(e) => (setOtp(e.target.value))}
-                  required
-                  className="w-full mt-1 px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
-                />
+                <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)} required className="w-full mt-1 px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200" />
               </div>
             )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              {loading
-                ? "Processing..."
-                : otpSent
-                ? "Verify OTP"
-                : "Send OTP"}
+            <button type="submit" disabled={loading} className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+              {loading ? "Processing..." : otpSent ? "Verify OTP" : "Send OTP"}
             </button>
           </form>
         )}
@@ -144,35 +102,13 @@ const Auth = () => {
           <form onSubmit={handleAdminLogin} className="space-y-4">
             <div>
               <label className="block text-sm font-medium">Full Name</label>
-              <input
-                type="text"
-                value={adminForm.name}
-                onChange={(e) =>
-                  setAdminForm({ ...adminForm, name: e.target.value })
-                }
-                required
-                className="w-full mt-1 px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
-              />
+              <input type="text" value={adminForm.name} onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })} required className="w-full mt-1 px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200" />
             </div>
             <div>
               <label className="block text-sm font-medium">Password</label>
-              <input
-                type="password"
-                value={adminForm.password}
-                onChange={(e) =>
-                  setAdminForm({ ...adminForm, password: e.target.value })
-                }
-                required
-                className="w-full mt-1 px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
-              />
+              <input type="password" value={adminForm.password} onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })} required className="w-full mt-1 px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200" />
             </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              {loading ? "Logging in..." : "Login"}
-            </button>
+            <button type="submit" disabled={loading} className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">{loading ? "Logging in..." : "Login"}</button>
           </form>
         )}
 

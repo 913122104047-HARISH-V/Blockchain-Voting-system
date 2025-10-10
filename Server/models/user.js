@@ -1,10 +1,15 @@
 const mongoose = require('mongoose');
 
+// 🧑‍💼 USERS COLLECTION
 const userSchema = new mongoose.Schema({
-  aadharNumber: {
+  aadhaarNumber: {
     type: String,
     required: true,
     unique: true,
+  },
+  name: {
+    type: String,
+    required: true,
   },
   email: {
     type: String,
@@ -16,6 +21,42 @@ const userSchema = new mongoose.Schema({
   otpExpires: {
     type: Date,
   },
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+  faceData: {
+    type: String, // can be Base64 encoding, image URL, or embedding vector
+  },
+  isFaceVerified: {
+    type: Boolean,
+    default: false,
+  },
+  walletAddress: {
+    type: String,
+  },
+  hasVoted: {
+    type: Boolean,
+    default: false,
+  },
+  electionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Election",
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
-module.exports = mongoose.model("User", userSchema);
+userSchema.pre("save", function (next) {
+  this.updatedAt = Date.now();
+  next();
+});
+
+
+module.exports =  mongoose.model("User", userSchema);

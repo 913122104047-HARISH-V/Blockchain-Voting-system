@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 const OTP_LENGTH = 6
 const INITIAL_COUNTDOWN = 30
 
-function AdminOTPVerification() {
+function OTPVerification() {
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''))
   const [countdown, setCountdown] = useState(INITIAL_COUNTDOWN)
   const [error, setError] = useState('')
@@ -13,8 +13,8 @@ function AdminOTPVerification() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!location.state?.adminId) {
-      navigate('/admin/login')
+    if (!location.state?.aadhaar) {
+      navigate('/voter/login')
     }
   }, [location.state, navigate])
 
@@ -60,13 +60,13 @@ function AdminOTPVerification() {
       return
     }
 
-    if (joinedOtp !== '654321') {
+    if (joinedOtp !== '123456') {
       setError('Incorrect OTP. Please try again.')
       return
     }
 
     setError('')
-    navigate('/admin/face-verification')
+    navigate('/voter/face-verification')
   }
 
   const handleResend = () => {
@@ -90,14 +90,11 @@ function AdminOTPVerification() {
             </div>
             <div>
               <p className="font-bold text-slate-900">BlockVote</p>
-              <p className="text-sm text-slate-500">Admin OTP Verification</p>
+              <p className="text-sm text-slate-500">OTP Verification</p>
             </div>
           </div>
 
-          <Link
-            to="/"
-            className="font-medium text-slate-700 transition hover:text-emerald-600"
-          >
+          <Link to="/" className="font-medium text-slate-700 hover:text-emerald-600">
             Home
           </Link>
         </div>
@@ -105,12 +102,10 @@ function AdminOTPVerification() {
 
       <main className="flex min-h-[calc(100vh-73px)] items-center justify-center px-6 py-16">
         <div className="w-full max-w-xl rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-          <h1 className="text-3xl font-bold text-slate-900">
-            Admin OTP Verification
-          </h1>
+          <h1 className="text-3xl font-bold text-slate-900">OTP Verification</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Enter the OTP sent to your registered email address to confirm your
-            admin identity.
+            Enter the OTP sent to your registered email or mobile number to
+            confirm your identity.
           </p>
 
           <form className="mt-8" onSubmit={handleSubmit}>
@@ -170,4 +165,4 @@ function AdminOTPVerification() {
   )
 }
 
-export default AdminOTPVerification
+export default OTPVerification

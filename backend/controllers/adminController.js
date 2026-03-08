@@ -4,6 +4,7 @@ const Voter = require("../models/Voter");
 const Party = require("../models/Party");
 const { calculateMajorityMark } = require("../utils/majorityCalculator");
 const { hashAadhaar } = require("../utils/aadhaarHash");
+const { createConstituencyOnChain } = require("../services/blockchainService");
 
 async function recalculateStateCounts(stateId) {
   const total = await Constituency.countDocuments({ state_id: stateId });
@@ -39,8 +40,14 @@ async function createConstituency(req, res, next) {
     const state = await State.findById(state_id);
     if (!state) return res.status(404).json({ message: "State not found" });
 
+    const { onChainId } = await createConstituencyOnChain({
+      name,
+      stateName: state.name,
+    });
+
     const constituency = await Constituency.create({
       state_id,
+      on_chain_id: onChainId,
       name,
       total_voters: total_voters || 0,
     });

@@ -1,7 +1,7 @@
 const Candidate = require("../models/Candidate");
 const Election = require("../models/Election");
 const State = require("../models/State");
-const { getVotesByElection } = require("./blockchainService");
+const { getResultsByElection } = require("./blockchainService");
 
 async function tallyElectionVotes(electionId) {
   const election = await Election.findById(electionId);
@@ -15,17 +15,20 @@ async function tallyElectionVotes(electionId) {
     is_active: true,
   }).populate("party_id", "name");
 
-  const votes = getVotesByElection(election._id.toString());
+  if (!election.on_chain_id) {
+    throw new Error("Election is not synced on blockchain");
+  }
+
+  const votes = await getResultsByElection(election.on_chain_id);
   const voteCountByCandidate = new Map();
   for (const vote of votes) {
-    const prev = voteCountByCandidate.get(vote.candidateId) || 0;
-    voteCountByCandidate.set(vote.candidateId, prev + 1);
+    voteCountByCandidate.set(String(vote.id), vote.voteCount);
   }
 
   const byConstituency = new Map();
   for (const candidate of candidates) {
     const constituencyId = candidate.constituency_id.toString();
-    const candidateId = candidate._id.toString();
+    const candidateId = String(candidate.on_chain_id || "");
     const count = voteCountByCandidate.get(candidateId) || 0;
     const current = byConstituency.get(constituencyId);
     if (!current || count > current.votes) {
@@ -57,6 +60,10 @@ async function tallyElectionVotes(electionId) {
 
   const majorityMark = state ? state.majority_mark : 0;
   const hasMajority = maxSeats >= majorityMark;
+  const totalVotesRecorded = votes.reduce(
+    (sum, candidateVote) => sum + candidateVote.voteCount,
+    0
+  );
 
   return {
     election_id: election._id.toString(),
@@ -65,7 +72,7 @@ async function tallyElectionVotes(electionId) {
     constituency_winners: constituencyWinners,
     party_wins: partyWins,
     ruling_party: hasMajority ? rulingParty : null,
-    total_votes_recorded: votes.length,
+    total_votes_recorded: totalVotesRecorded,
   };
 }
 

@@ -6,8 +6,24 @@ const { hashAadhaar } = require("../utils/aadhaarHash");
 const { generateOtp, verifyOtp } = require("../services/otpService");
 const { verifyFace } = require("../services/faceVerificationService");
 
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not configured");
+  }
+  return secret;
+}
+
+function buildOtpResponse(message, otp) {
+  const response = { message };
+  if (process.env.ENABLE_DEMO_OTP === "true") {
+    response.otp_for_demo = otp;
+  }
+  return response;
+}
+
 function signToken(payload) {
-  return jwt.sign(payload, process.env.JWT_SECRET || "dev-secret", { expiresIn: "12h" });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: "12h" });
 }
 
 async function adminLogin(req, res, next) {
@@ -20,11 +36,8 @@ async function adminLogin(req, res, next) {
       return res.status(401).json({ message: "Invalid admin credentials" });
     }
 
-    const otp = generateOtp("admin", email);
-    return res.json({
-      message: "OTP sent to admin email",
-      otp_for_demo: otp,
-    });
+    const otp = await generateOtp("admin", email);
+    return res.json(buildOtpResponse("OTP sent to admin email", otp));
   } catch (err) {
     return next(err);
   }
@@ -33,7 +46,7 @@ async function adminLogin(req, res, next) {
 async function verifyAdminOtpAndFace(req, res, next) {
   try {
     const { email, otp, faceToken } = req.body;
-    const isOtpValid = verifyOtp("admin", email, otp);
+    const isOtpValid = await verifyOtp("admin", email, otp);
     if (!isOtpValid) {
       return res.status(401).json({ message: "Invalid or expired OTP" });
     }
@@ -64,11 +77,10 @@ async function voterInitLogin(req, res, next) {
       return res.status(404).json({ message: "Voter not found or not eligible" });
     }
 
-    const otp = generateOtp("voter", voter._id.toString());
+    const otp = await generateOtp("voter", voter._id.toString());
     return res.json({
-      message: "OTP sent to registered contact",
+      ...buildOtpResponse("OTP sent to registered contact", otp),
       voter_id: voter._id,
-      otp_for_demo: otp,
     });
   } catch (err) {
     return next(err);
@@ -83,7 +95,7 @@ async function verifyVoterOtpAndFace(req, res, next) {
       return res.status(404).json({ message: "Voter not found" });
     }
 
-    const isOtpValid = verifyOtp("voter", voter._id.toString(), otp);
+    const isOtpValid = await verifyOtp("voter", voter._id.toString(), otp);
     if (!isOtpValid) {
       return res.status(401).json({ message: "Invalid or expired OTP" });
     }

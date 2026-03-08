@@ -1,27 +1,57 @@
-const OTP_TTL_MS = Number(process.env.OTP_TTL_MS || 5 * 60 * 1000);
-const otpStore = new Map();
+const crypto = require("crypto");
+const OtpToken = require("../models/OtpToken");
 
-function makeKey(scope, id) {
-  return `${scope}:${id}`;
+const OTP_TTL_MS = Number(process.env.OTP_TTL_MS || 5 * 60 * 1000);
+
+function hashOtp(otp) {
+  return crypto.createHash("sha256").update(String(otp)).digest("hex");
 }
 
-function generateOtp(scope, id) {
-  const otp = String(Math.floor(100000 + Math.random() * 900000));
-  const key = makeKey(scope, id);
-  otpStore.set(key, { otp, expiresAt: Date.now() + OTP_TTL_MS });
+async function generateOtp(scope, id) {
+  const otp = String(crypto.randomInt(100000, 1000000));
+  const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+  await OtpToken.findOneAndUpdate(
+    {
+      scope,
+      subject_id: String(id),
+    },
+    {
+      scope,
+      subject_id: String(id),
+      otp_hash: hashOtp(otp),
+      expires_at: expiresAt,
+    },
+    {
+      upsert: true,
+      new: true,
+      setDefaultsOnInsert: true,
+    }
+  );
+
   return otp;
 }
 
-function verifyOtp(scope, id, submittedOtp) {
-  const key = makeKey(scope, id);
-  const record = otpStore.get(key);
-  if (!record) return false;
-  if (Date.now() > record.expiresAt) {
-    otpStore.delete(key);
+async function verifyOtp(scope, id, submittedOtp) {
+  const record = await OtpToken.findOne({
+    scope,
+    subject_id: String(id),
+  });
+
+  if (!record) {
     return false;
   }
-  const ok = String(submittedOtp) === record.otp;
-  if (ok) otpStore.delete(key);
+
+  if (Date.now() > record.expires_at.getTime()) {
+    await OtpToken.deleteOne({ _id: record._id });
+    return false;
+  }
+
+  const ok = hashOtp(submittedOtp) === record.otp_hash;
+  if (ok) {
+    await OtpToken.deleteOne({ _id: record._id });
+  }
+
   return ok;
 }
 

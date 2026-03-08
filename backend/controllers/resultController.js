@@ -1,5 +1,6 @@
 const Election = require("../models/Election");
 const { tallyElectionVotes } = require("../services/tallyService");
+const { publishResultsOnChain } = require("../services/blockchainService");
 
 async function getElectionResult(req, res, next) {
   try {
@@ -28,7 +29,29 @@ async function getLatestStateResult(req, res, next) {
   }
 }
 
+async function publishElectionResult(req, res, next) {
+  try {
+    const { electionId } = req.params;
+    const election = await Election.findById(electionId);
+    if (!election) return res.status(404).json({ message: "Election not found" });
+    if (!election.on_chain_id) {
+      return res.status(400).json({ message: "Election is not synced on blockchain" });
+    }
+
+    const published = await publishResultsOnChain(election.on_chain_id);
+
+    return res.json({
+      message: "Results published on blockchain",
+      election_id: election._id,
+      tx_hash: published.txHash,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   getElectionResult,
   getLatestStateResult,
+  publishElectionResult,
 };

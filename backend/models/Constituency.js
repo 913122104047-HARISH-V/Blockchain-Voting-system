@@ -3,6 +3,7 @@ const { Schema, model } = require("mongoose");
 const constituencySchema = new Schema(
   {
     state_id: { type: Schema.Types.ObjectId, ref: "State", required: true, index: true },
+    on_chain_id: { type: Number, unique: true, sparse: true, index: true },
     name: { type: String, required: true, trim: true },
     total_voters: { type: Number, required: true, default: 0 },
   },

@@ -3,6 +3,7 @@ const { Schema, model } = require("mongoose");
 const candidateSchema = new Schema(
   {
     election_id: { type: Schema.Types.ObjectId, ref: "Election", required: true },
+    on_chain_id: { type: Number, unique: true, sparse: true, index: true },
     constituency_id: { type: Schema.Types.ObjectId, ref: "Constituency", required: true },
     name: { type: String, required: true, trim: true },
     party_id: { type: Schema.Types.ObjectId, ref: "Party", default: null },

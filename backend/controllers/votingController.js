@@ -1,12 +1,12 @@
 const Election = require("../models/Election");
 const Candidate = require("../models/Candidate");
 const WalletBinding = require("../models/WalletBinding");
-const { castVote } = require("../services/blockchainService");
+const { verifyVoteTransaction } = require("../services/blockchainService");
 
 async function submitVote(req, res, next) {
   try {
     const voterId = req.user.voterId;
-    const { candidate_id, wallet_address } = req.body;
+    const { candidate_id, wallet_address, tx_hash } = req.body;
     if (!candidate_id || !wallet_address) {
       return res.status(400).json({ message: "candidate_id and wallet_address are required" });
     }
@@ -39,17 +39,30 @@ async function submitVote(req, res, next) {
       return res.status(404).json({ message: "Candidate not found in your constituency election list" });
     }
 
-    const { txHash } = castVote({
-      electionId: election._id.toString(),
-      candidateId: candidate._id.toString(),
-      walletAddress: wallet_address,
-    });
+    if (!election.on_chain_id || !candidate.on_chain_id) {
+      return res.status(400).json({ message: "Election or candidate is not synced on blockchain" });
+    }
+
+    let verification = null;
+    if (tx_hash) {
+      verification = await verifyVoteTransaction({
+        txHash: tx_hash,
+        electionOnChainId: election.on_chain_id,
+        candidateOnChainId: candidate.on_chain_id,
+        walletAddress: wallet_address,
+      });
+    }
 
     return res.json({
-      message: "Vote submitted on blockchain",
-      tx_hash: txHash,
+      message: tx_hash
+        ? "Vote transaction verified"
+        : "Vote validated. Submit using MetaMask from the frontend.",
+      tx_hash: tx_hash || null,
       election_id: election._id,
       candidate_id: candidate._id,
+      election_on_chain_id: election.on_chain_id,
+      candidate_on_chain_id: candidate.on_chain_id,
+      verification,
     });
   } catch (err) {
     return next(err);

@@ -2,6 +2,8 @@ const Election = require("../models/Election");
 const Candidate = require("../models/Candidate");
 const Voter = require("../models/Voter");
 const WalletBinding = require("../models/WalletBinding");
+const Constituency = require("../models/Constituency");
+const { registerVoterOnChain } = require("../services/blockchainService");
 
 async function getVoterDashboard(req, res, next) {
   try {
@@ -52,21 +54,46 @@ async function bindWallet(req, res, next) {
     if (!wallet_address) return res.status(400).json({ message: "wallet_address is required" });
 
     const normalized = wallet_address.toLowerCase();
+    const voter = await Voter.findById(voterId);
+    if (!voter) return res.status(404).json({ message: "Voter not found" });
+
+    const constituency = await Constituency.findById(voter.constituency_id);
+    if (!constituency) {
+      return res.status(404).json({ message: "Constituency not found for voter" });
+    }
+
     const existing = await WalletBinding.findOne({ voter_id: voterId, is_primary: true });
+    let walletBinding;
     if (existing) {
       existing.wallet_address = normalized;
       existing.bound_at = new Date();
-      await existing.save();
-      return res.json(existing);
+      walletBinding = await existing.save();
+    } else {
+      walletBinding = await WalletBinding.create({
+        voter_id: voterId,
+        wallet_address: normalized,
+        is_primary: true,
+        bound_at: new Date(),
+      });
     }
 
-    const binding = await WalletBinding.create({
-      voter_id: voterId,
-      wallet_address: normalized,
-      is_primary: true,
-      bound_at: new Date(),
+    const activeElections = await Election.find({
+      state_id: req.user.stateId,
+      status: { $in: ["scheduled", "active"] },
+      on_chain_id: { $ne: null },
     });
-    return res.status(201).json(binding);
+
+    if (constituency.on_chain_id) {
+      for (const election of activeElections) {
+        await registerVoterOnChain({
+          electionOnChainId: election.on_chain_id,
+          voterWalletAddress: normalized,
+          constituencyOnChainId: constituency.on_chain_id,
+        });
+      }
+    }
+
+    return res.status(existing ? 200 : 201).json(walletBinding);
   } catch (err) {
     return next(err);
   }

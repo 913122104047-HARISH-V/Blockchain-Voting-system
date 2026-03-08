@@ -2,12 +2,17 @@ const Candidate = require("../models/Candidate");
 const Election = require("../models/Election");
 const ElectionConstituency = require("../models/ElectionConstituency");
 const Party = require("../models/Party");
+const Constituency = require("../models/Constituency");
+const { addCandidateOnChain } = require("../services/blockchainService");
 
 async function addCandidate(req, res, next) {
   try {
     const { election_id, constituency_id, name, party_id, symbol, wallet_address } = req.body;
     const election = await Election.findById(election_id);
     if (!election) return res.status(404).json({ message: "Election not found" });
+    if (!election.on_chain_id) {
+      return res.status(400).json({ message: "Election is not synced on blockchain" });
+    }
 
     const ec = await ElectionConstituency.findOne({
       election_id,
@@ -16,13 +21,29 @@ async function addCandidate(req, res, next) {
     });
     if (!ec) return res.status(400).json({ message: "Constituency is not active for this election" });
 
+    const constituency = await Constituency.findById(constituency_id);
+    if (!constituency) return res.status(404).json({ message: "Constituency not found" });
+    if (!constituency.on_chain_id) {
+      return res.status(400).json({ message: "Constituency is not synced on blockchain" });
+    }
+
+    let partyName = "Independent";
     if (party_id) {
       const party = await Party.findById(party_id);
       if (!party) return res.status(404).json({ message: "Party not found" });
+      partyName = party.name;
     }
+
+    const { onChainId } = await addCandidateOnChain({
+      electionOnChainId: election.on_chain_id,
+      candidateName: name,
+      partyName,
+      constituencyOnChainId: constituency.on_chain_id,
+    });
 
     const candidate = await Candidate.create({
       election_id,
+      on_chain_id: onChainId,
       constituency_id,
       name,
       party_id: party_id || null,

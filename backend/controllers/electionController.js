@@ -2,6 +2,11 @@ const State = require("../models/State");
 const Election = require("../models/Election");
 const Constituency = require("../models/Constituency");
 const ElectionConstituency = require("../models/ElectionConstituency");
+const {
+  createElectionOnChain,
+  startElectionOnChain,
+  endElectionOnChain,
+} = require("../services/blockchainService");
 
 async function createElection(req, res, next) {
   try {
@@ -9,8 +14,16 @@ async function createElection(req, res, next) {
     const state = await State.findById(state_id);
     if (!state) return res.status(404).json({ message: "State not found" });
 
+    const { onChainId } = await createElectionOnChain({
+      title,
+      stateName: state.name,
+      startTime: start_time,
+      endTime: end_time,
+    });
+
     const election = await Election.create({
       state_id,
+      on_chain_id: onChainId,
       title,
       start_time,
       end_time,
@@ -27,6 +40,10 @@ async function createElection(req, res, next) {
           status: "active",
         }))
       );
+    }
+
+    if ((status || "scheduled") === "active" && onChainId) {
+      await startElectionOnChain(onChainId);
     }
 
     return res.status(201).json(election);
@@ -56,6 +73,18 @@ async function updateElectionStatus(req, res, next) {
     if (!election) return res.status(404).json({ message: "Election not found" });
 
     if (status === "active") {
+      const previouslyActiveElections = await Election.find({
+        state_id: election.state_id,
+        status: "active",
+        _id: { $ne: election._id },
+      });
+
+      for (const activeElection of previouslyActiveElections) {
+        if (activeElection.on_chain_id) {
+          await endElectionOnChain(activeElection.on_chain_id);
+        }
+      }
+
       await Election.updateMany(
         {
           state_id: election.state_id,
@@ -64,6 +93,14 @@ async function updateElectionStatus(req, res, next) {
         },
         { $set: { status: "completed" } }
       );
+
+      if (election.on_chain_id) {
+        await startElectionOnChain(election.on_chain_id);
+      }
+    }
+
+    if (status === "completed" && election.on_chain_id) {
+      await endElectionOnChain(election.on_chain_id);
     }
 
     election.status = status;

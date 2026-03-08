@@ -3,6 +3,7 @@ const { Schema, model } = require("mongoose");
 const electionSchema = new Schema(
   {
     state_id: { type: Schema.Types.ObjectId, ref: "State", required: true, index: true },
+    on_chain_id: { type: Number, unique: true, sparse: true, index: true },
     title: { type: String, required: true, trim: true },
     start_time: { type: Date, required: true },
     end_time: { type: Date, required: true },

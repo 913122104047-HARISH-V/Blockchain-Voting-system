@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { submitVoteTransaction } from '../../blockchain/voteTransaction'
 
 const fallbackVoter = {
   state: 'Tamil Nadu',
@@ -9,6 +10,7 @@ const fallbackVoter = {
 const allCandidates = [
   {
     id: 1,
+    onChainId: 1,
     name: 'Arun Kumar',
     party: 'Progressive Party',
     symbol: 'Hand',
@@ -17,6 +19,7 @@ const allCandidates = [
   },
   {
     id: 2,
+    onChainId: 2,
     name: 'Meera Sharma',
     party: 'People Front',
     symbol: 'Lotus',
@@ -25,6 +28,7 @@ const allCandidates = [
   },
   {
     id: 3,
+    onChainId: 3,
     name: 'David Raj',
     party: 'Unity Congress',
     symbol: 'Cycle',
@@ -39,6 +43,7 @@ function CandidateList() {
   const voter = location.state?.voter || fallbackVoter
   const election = location.state?.election || {
     name: 'Tamil Nadu General Election 2026',
+    onChainId: 1,
   }
   const walletAddress = location.state?.walletAddress || ''
 
@@ -70,20 +75,9 @@ function CandidateList() {
     setError('')
 
     try {
-      const [from] = await window.ethereum.request({
-        method: 'eth_requestAccounts',
-      })
-
-      const transactionHash = await window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [
-          {
-            from,
-            to: from,
-            value: '0x0',
-            data: `0x${selectedCandidate.id.toString(16)}`,
-          },
-        ],
+      const { transactionHash } = await submitVoteTransaction({
+        electionOnChainId: election.onChainId,
+        candidateOnChainId: selectedCandidate.onChainId,
       })
 
       navigate('/voter/vote-success', {
@@ -92,7 +86,7 @@ function CandidateList() {
           election,
           candidate: selectedCandidate,
           transactionHash,
-          walletAddress: walletAddress || from,
+          walletAddress,
         },
       })
     } catch (transactionError) {

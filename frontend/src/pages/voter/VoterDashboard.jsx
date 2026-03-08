@@ -11,6 +11,7 @@ const voter = {
 const activeElection = {
   name: 'Tamil Nadu General Election 2026',
   status: 'Active',
+  onChainId: 1,
 }
 
 function VoterDashboard() {

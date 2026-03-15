@@ -5,6 +5,7 @@ const Party = require("../models/Party");
 const { calculateMajorityMark } = require("../utils/majorityCalculator");
 const { hashAadhaar } = require("../utils/aadhaarHash");
 const { createConstituencyOnChain } = require("../services/blockchainService");
+const Election = require("../models/Election");
 
 async function recalculateStateCounts(stateId) {
   const total = await Constituency.countDocuments({ state_id: stateId });
@@ -91,7 +92,8 @@ async function addPermanentVoter(req, res, next) {
       dob,
       gender,
       constituency_id,
-      aadhaar_hash: hashAadhaar(aadhaar_number),
+      aadhaar_number,
+      aadhaar_hash: null,
       email,
       mobile,
       face_embedding,
@@ -111,17 +113,28 @@ async function addPermanentVoter(req, res, next) {
 
 async function createParty(req, res, next) {
   try {
-    const { name, symbol } = req.body;
-    const party = await Party.create({ name, symbol });
+    const { election_id, name, symbol } = req.body;
+    const election = await Election.findById(election_id);
+    if (!election) return res.status(404).json({ message: "Election not found" });
+
+    const party = await Party.create({
+      election_id,
+      name,
+      symbol: symbol || name,
+    });
     return res.status(201).json(party);
   } catch (err) {
     return next(err);
   }
 }
 
-async function listParties(_req, res, next) {
+async function listParties(req, res, next) {
   try {
-    const parties = await Party.find({}).sort({ name: 1 });
+    const filter = {};
+    if (req.query.election_id) {
+      filter.election_id = req.query.election_id;
+    }
+    const parties = await Party.find(filter).sort({ name: 1 });
     return res.json(parties);
   } catch (err) {
     return next(err);

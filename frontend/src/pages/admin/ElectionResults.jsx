@@ -1,94 +1,60 @@
-import { useMemo, useState } from 'react'
-
-const elections = [
-  {
-    id: 'tn-2026',
-    name: 'Tamil Nadu General Election 2026',
-    majorityMark: 3,
-    winners: [
-      {
-        constituency: 'Chennai Central',
-        candidate: 'Arun Kumar',
-        party: 'Progressive Party',
-        votes: 86540,
-      },
-      {
-        constituency: 'Coimbatore',
-        candidate: 'Meena Ravi',
-        party: 'People Front',
-        votes: 79110,
-      },
-      {
-        constituency: 'Madurai',
-        candidate: 'Siva Narayan',
-        party: 'Progressive Party',
-        votes: 74220,
-      },
-      {
-        constituency: 'Tiruchirappalli',
-        candidate: 'Deepa Lakshmi',
-        party: 'Progressive Party',
-        votes: 71880,
-      },
-    ],
-  },
-  {
-    id: 'ka-2026',
-    name: 'Karnataka Assembly Election 2026',
-    majorityMark: 2,
-    winners: [
-      {
-        constituency: 'Bengaluru South',
-        candidate: 'Rohan Shetty',
-        party: 'National Alliance',
-        votes: 91220,
-      },
-      {
-        constituency: 'Mysuru',
-        candidate: 'Nisha Gowda',
-        party: 'National Alliance',
-        votes: 80400,
-      },
-      {
-        constituency: 'Mangaluru',
-        candidate: 'Farhan Ali',
-        party: 'Civic Front',
-        votes: 76630,
-      },
-    ],
-  },
-]
+import { useEffect, useMemo, useState } from 'react'
+import { listElections } from '../../api/electionApi'
+import { getElectionResult } from '../../api/resultApi'
 
 function ElectionResults() {
-  const [selectedElectionId, setSelectedElectionId] = useState(elections[0].id)
+  const [elections, setElections] = useState([])
+  const [selectedElectionId, setSelectedElectionId] = useState('')
+  const [result, setResult] = useState(null)
   const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
 
-  const selectedElection = elections.find(
-    (election) => election.id === selectedElectionId,
-  )
+  useEffect(() => {
+    (async () => {
+      try {
+        const e = await listElections()
+        setElections(e)
+        if (e.length) setSelectedElectionId(e[0]._id)
+      } catch (e) {
+        setError(e?.response?.data?.message || 'Failed to load elections')
+      }
+    })()
+  }, [])
+
+  useEffect(() => {
+    (async () => {
+      if (!selectedElectionId) return
+      try {
+        const data = await getElectionResult(selectedElectionId)
+        setResult(data)
+      } catch (e) {
+        setError(e?.response?.data?.message || 'Failed to load results')
+      }
+    })()
+  }, [selectedElectionId])
 
   const summary = useMemo(() => {
-    const totals = selectedElection.winners.reduce((accumulator, winner) => {
-      accumulator[winner.party] = (accumulator[winner.party] || 0) + 1
-      return accumulator
+    if (!result?.winners) return []
+    const totals = result.winners.reduce((acc, winner) => {
+      const party = winner.party || 'Independent'
+      acc[party] = (acc[party] || 0) + 1
+      return acc
     }, {})
-
     return Object.entries(totals)
       .map(([party, seats]) => ({
         party,
         seats,
-        isRulingParty: seats >= selectedElection.majorityMark,
+        isRulingParty: seats >= (result.majority_mark || 0),
       }))
-      .sort((left, right) => right.seats - left.seats)
-  }, [selectedElection])
+      .sort((a, b) => b.seats - a.seats)
+  }, [result])
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-slate-900">Election Results</h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Review constituency-wise winners, compare party seat totals, and
-          publish the final result summary for public view.
+          Review constituency-wise winners, compare party seat totals, and publish the final result summary.
         </p>
       </div>
 
@@ -106,31 +72,26 @@ function ElectionResults() {
             onChange={(event) => {
               setSelectedElectionId(event.target.value)
               setMessage('')
+              setError('')
             }}
             className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
           >
             {elections.map((election) => (
-              <option key={election.id} value={election.id}>
-                {election.name}
+              <option key={election._id} value={election._id}>
+                {election.title}
               </option>
             ))}
           </select>
-          <button
-            type="button"
-            onClick={() =>
-              setMessage(
-                `${selectedElection.name} results published to the public portal.`,
-              )
-            }
-            className="rounded-2xl bg-emerald-600 px-5 py-3 font-semibold text-white transition hover:bg-emerald-700"
-          >
-            Publish Results
-          </button>
         </div>
 
         {message ? (
           <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
             {message}
+          </p>
+        ) : null}
+        {error ? (
+          <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+            {error}
           </p>
         ) : null}
       </section>
@@ -147,7 +108,7 @@ function ElectionResults() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {selectedElection.winners.map((winner) => (
+              {result?.winners?.map((winner) => (
                 <tr key={winner.constituency}>
                   <td className="px-5 py-4 font-medium text-slate-900">
                     {winner.constituency}
@@ -155,9 +116,9 @@ function ElectionResults() {
                   <td className="px-5 py-4 text-slate-600">
                     {winner.candidate}
                   </td>
-                  <td className="px-5 py-4 text-slate-600">{winner.party}</td>
+                  <td className="px-5 py-4 text-slate-600">{winner.party || 'Independent'}</td>
                   <td className="px-5 py-4 text-slate-600">
-                    {winner.votes.toLocaleString()}
+                    {winner.votes?.toLocaleString?.() || winner.votes || 0}
                   </td>
                 </tr>
               ))}
@@ -172,7 +133,7 @@ function ElectionResults() {
             Party Summary
           </h2>
           <p className="mt-1 text-sm text-slate-600">
-            Majority mark for this election: {selectedElection.majorityMark}
+            Majority mark for this election: {result?.majority_mark ?? '-'}
           </p>
         </div>
 

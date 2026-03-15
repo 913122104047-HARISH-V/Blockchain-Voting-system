@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { initVoterLogin } from '../../api/voterApi'
 
 function AadhaarLogin() {
   const [aadhaar, setAadhaar] = useState('')
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     const normalized = aadhaar.replace(/\s+/g, '')
@@ -18,11 +20,22 @@ function AadhaarLogin() {
     }
 
     setError('')
-    navigate('/voter/otp', {
-      state: {
-        aadhaar: normalized,
-      },
-    })
+    setLoading(true)
+    try {
+      const data = await initVoterLogin(normalized)
+      navigate('/voter/otp', {
+        state: {
+          aadhaar: normalized,
+          voter_id: data.voter_id,
+          otp_for_demo: data.otp_for_demo,
+        },
+      })
+    } catch (e) {
+      console.log(e);
+      setError(e?.response?.data?.message || 'Unable to start voter login.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -84,9 +97,10 @@ function AadhaarLogin() {
 
             <button
               type="submit"
-              className="w-full rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white transition hover:bg-emerald-700"
+              disabled={loading}
+              className="w-full rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
             >
-              Send OTP
+              {loading ? 'Sending OTP...' : 'Send OTP'}
             </button>
           </form>
         </div>

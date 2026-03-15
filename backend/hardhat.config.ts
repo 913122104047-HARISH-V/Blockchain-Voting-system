@@ -2,8 +2,9 @@ import { defineConfig } from "hardhat/config";
 
 export default defineConfig({
   solidity: {
-    version: "0.8.20",
+    version: "0.8.19",
     settings: {
+      evmVersion: "paris", // avoids Shanghai-only PUSH0 on older nodes
       optimizer: {
         enabled: true,
         runs: 200,

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { verifyVoterOtp } from '../../api/voterApi'
 
 const OTP_LENGTH = 6
 const INITIAL_COUNTDOWN = 30
@@ -13,7 +14,7 @@ function OTPVerification() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!location.state?.aadhaar) {
+    if (!location.state?.aadhaar || !location.state?.voter_id) {
       navigate('/voter/login')
     }
   }, [location.state, navigate])
@@ -51,7 +52,7 @@ function OTPVerification() {
     }
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     const joinedOtp = otp.join('')
@@ -60,13 +61,22 @@ function OTPVerification() {
       return
     }
 
-    if (joinedOtp !== '123456') {
-      setError('Incorrect OTP. Please try again.')
-      return
+    try {
+      const { token } = await verifyVoterOtp({
+        voter_id: location.state.voter_id,
+        otp: joinedOtp,
+        faceToken: 'voter-face-token',
+      })
+      if (token) {
+        localStorage.setItem('voter_token', token)
+        setError('')
+        navigate('/voter/face-verification')
+      } else {
+        setError('Verification failed. Try again.')
+      }
+    } catch (e) {
+      setError(e?.response?.data?.message || 'Incorrect OTP.')
     }
-
-    setError('')
-    navigate('/voter/face-verification')
   }
 
   const handleResend = () => {

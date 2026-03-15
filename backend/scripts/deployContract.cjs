@@ -47,21 +47,42 @@ async function main() {
   }
 
   const rpcUrl = requireEnv("BLOCKCHAIN_RPC_URL");
-  const privateKey = requireEnv("BLOCKCHAIN_ADMIN_PRIVATE_KEY");
-  const chainId = process.env.BLOCKCHAIN_CHAIN_ID || "1337";
+const privateKey = requireEnv("BLOCKCHAIN_ADMIN_PRIVATE_KEY");
 
-  const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
-  const provider = new ethers.JsonRpcProvider(rpcUrl, Number(chainId));
+const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
+
+const provider = new ethers.JsonRpcProvider(rpcUrl);
+const network = await provider.getNetwork();
+const chainId = Number(network.chainId);
+
+console.log("Connected Chain ID:", chainId);
+
+
   const wallet = new ethers.Wallet(privateKey, provider);
-  const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
+  const bytecode = artifact.bytecode?.object || artifact.bytecode;
+  if (!bytecode || !String(bytecode).startsWith("0x")) {
+    throw new Error("Bytecode missing or invalid in artifact");
+  }
+
+  const factory = new ethers.ContractFactory(artifact.abi, bytecode, wallet);
+  console.log("ABI loaded:", artifact.abi.length);
+  console.log("Bytecode length:", String(bytecode).length);
 
   console.log("Deploying StateElectionVoting...");
-  const contract = await factory.deploy();
+  const deployOptions = {};
+  deployOptions.gasLimit = BigInt(process.env.DEPLOY_GAS_LIMIT || 6_000_000);
+  if (process.env.DEPLOY_GAS_PRICE_GWEI) {
+    deployOptions.gasPrice = ethers.parseUnits(process.env.DEPLOY_GAS_PRICE_GWEI, "gwei");
+  }
+
+  const contract = await factory.deploy(deployOptions);
   await contract.waitForDeployment();
+
 
   const contractAddress = await contract.getAddress();
   console.log(`Contract deployed at: ${contractAddress}`);
 
+  
   upsertEnvValue(path.join(backendRoot, ".env"), "VOTING_CONTRACT_ADDRESS", contractAddress);
   upsertEnvValue(
     path.join(frontendRoot, ".env"),
@@ -78,6 +99,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error);
+  console.error("Deploy failed:", error);
+  console.error("RPC error body:", error?.error?.body || "");
   process.exit(1);
 });

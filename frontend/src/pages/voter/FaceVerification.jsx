@@ -12,6 +12,12 @@ function FaceVerification() {
   const navigate = useNavigate()
 
   useEffect(() => {
+    if (!localStorage.getItem('voter_token')) {
+      navigate('/voter/login')
+    }
+  }, [navigate])
+
+  useEffect(() => {
     let redirectTimer
 
     if (message) {
@@ -28,6 +34,10 @@ function FaceVerification() {
   }, [message, navigate])
 
   const handleStart = () => {
+    if (!localStorage.getItem('voter_token')) {
+      navigate('/voter/login')
+      return
+    }
     setCameraActive(true)
     setError('')
     setMessage('')

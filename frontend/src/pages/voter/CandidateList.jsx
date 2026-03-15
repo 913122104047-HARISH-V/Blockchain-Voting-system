@@ -1,68 +1,48 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { getVoterDashboard } from '../../api/voterApi'
 import { submitVoteTransaction } from '../../blockchain/voteTransaction'
-
-const fallbackVoter = {
-  state: 'Tamil Nadu',
-  constituency: 'Chennai Central',
-}
-
-const allCandidates = [
-  {
-    id: 1,
-    onChainId: 1,
-    name: 'Arun Kumar',
-    party: 'Progressive Party',
-    symbol: 'Hand',
-    constituency: 'Chennai Central',
-    state: 'Tamil Nadu',
-  },
-  {
-    id: 2,
-    onChainId: 2,
-    name: 'Meera Sharma',
-    party: 'People Front',
-    symbol: 'Lotus',
-    constituency: 'Chennai Central',
-    state: 'Tamil Nadu',
-  },
-  {
-    id: 3,
-    onChainId: 3,
-    name: 'David Raj',
-    party: 'Unity Congress',
-    symbol: 'Cycle',
-    constituency: 'Chennai Central',
-    state: 'Tamil Nadu',
-  },
-]
 
 function CandidateList() {
   const location = useLocation()
   const navigate = useNavigate()
-  const voter = location.state?.voter || fallbackVoter
-  const election = location.state?.election || {
-    name: 'Tamil Nadu General Election 2026',
-    onChainId: 1,
-  }
-  const walletAddress = location.state?.walletAddress || ''
-
+  const [dashboard, setDashboard] = useState({
+    voter: location.state?.voter || null,
+    election: location.state?.election || null,
+    candidates: location.state?.candidates || [],
+    walletAddress: location.state?.walletAddress || '',
+  })
   const [selectedCandidate, setSelectedCandidate] = useState(null)
   const [isVoting, setIsVoting] = useState(false)
   const [error, setError] = useState('')
 
-  const candidates = useMemo(
-    () =>
-      allCandidates.filter(
-        (candidate) =>
-          candidate.state === voter.state &&
-          candidate.constituency === voter.constituency,
-      ),
-    [voter.constituency, voter.state],
-  )
+  useEffect(() => {
+    if (!localStorage.getItem('voter_token')) {
+      navigate('/voter/login')
+      return
+    }
+    if (!dashboard.voter || !dashboard.election || !dashboard.candidates.length) {
+      (async () => {
+        try {
+          const data = await getVoterDashboard()
+          setDashboard((d) => ({
+            ...d,
+            voter: data.voter,
+            election: data.election,
+            candidates: data.candidates,
+            walletAddress: data.wallet_binding?.wallet_address || d.walletAddress,
+          }))
+        } catch (e) {
+          setError(e?.response?.data?.message || 'Failed to load candidates')
+        }
+      })()
+    }
+  }, [dashboard.candidates.length, dashboard.election, dashboard.voter, navigate])
+
+  const candidates = useMemo(() => dashboard.candidates || [], [dashboard.candidates])
 
   const handleVote = async () => {
-    if (!selectedCandidate) {
+    if (!selectedCandidate || !dashboard.election) {
       return
     }
 
@@ -76,17 +56,17 @@ function CandidateList() {
 
     try {
       const { transactionHash } = await submitVoteTransaction({
-        electionOnChainId: election.onChainId,
-        candidateOnChainId: selectedCandidate.onChainId,
+        electionOnChainId: dashboard.election.on_chain_id,
+        candidateOnChainId: selectedCandidate.on_chain_id,
       })
 
       navigate('/voter/vote-success', {
         state: {
-          voter,
-          election,
+          voter: dashboard.voter,
+          election: dashboard.election,
           candidate: selectedCandidate,
           transactionHash,
-          walletAddress,
+          walletAddress: dashboard.walletAddress,
         },
       })
     } catch (transactionError) {
@@ -105,14 +85,14 @@ function CandidateList() {
             Candidates for Your Constituency
           </h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            State: {voter.state} | Constituency: {voter.constituency}
+            State: {dashboard.voter?.state || ''} | Constituency: {dashboard.voter?.constituency || ''}
           </p>
         </div>
 
         <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {candidates.map((candidate) => (
             <article
-              key={candidate.id}
+              key={candidate._id}
               className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
             >
               <div className="flex items-start justify-between gap-4">
@@ -121,16 +101,16 @@ function CandidateList() {
                     {candidate.name}
                   </h2>
                   <p className="mt-2 text-sm text-slate-600">
-                    {candidate.party}
+                    {candidate.party_id?.name || 'Independent'}
                   </p>
                 </div>
                 <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-                  {candidate.symbol}
+                  {candidate.symbol || candidate.party_id?.symbol || candidate.party_id?.name || ''}
                 </div>
               </div>
 
               <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-                Constituency: {candidate.constituency}
+                Constituency: {dashboard.voter?.constituency || ''}
               </div>
 
               <button
@@ -159,7 +139,7 @@ function CandidateList() {
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               You are about to vote for {selectedCandidate.name} from{' '}
-              {selectedCandidate.party}. This action will be submitted through
+              {selectedCandidate.party_id?.name || 'Independent'}. This action will be submitted through
               MetaMask to the blockchain.
             </p>
 

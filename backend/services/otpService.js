@@ -2,13 +2,15 @@ const crypto = require("crypto");
 const OtpToken = require("../models/OtpToken");
 
 const OTP_TTL_MS = Number(process.env.OTP_TTL_MS || 5 * 60 * 1000);
+const STATIC_OTP = process.env.STATIC_OTP || "123456";
 
 function hashOtp(otp) {
   return crypto.createHash("sha256").update(String(otp)).digest("hex");
 }
 
 async function generateOtp(scope, id) {
-  const otp = String(crypto.randomInt(100000, 1000000));
+  // Use a fixed OTP for all flows (admin and voter) as requested.
+  const otp = STATIC_OTP;
   const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
   await OtpToken.findOneAndUpdate(

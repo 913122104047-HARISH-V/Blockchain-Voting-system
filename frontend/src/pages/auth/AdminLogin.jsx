@@ -1,5 +1,6 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import api from '../../api/axiosInstance'
 
 function AdminLogin() {
   const [identifier, setIdentifier] = useState('')
@@ -8,7 +9,7 @@ function AdminLogin() {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     const normalizedIdentifier = identifier.trim()
@@ -25,24 +26,14 @@ function AdminLogin() {
     setError('')
     setIsLoading(true)
 
-    window.setTimeout(() => {
-      const isValidCredential =
-        (normalizedIdentifier === 'admin@blockvote.com' ||
-          normalizedIdentifier === 'admin') &&
-        password === 'admin123'
-
-      if (!isValidCredential) {
-        setIsLoading(false)
-        setError('Incorrect admin credentials. Please try again.')
-        return
-      }
-
-      navigate('/admin/otp', {
-        state: {
-          adminId: normalizedIdentifier,
-        },
-      })
-    }, 1200)
+    try {
+      await api.post('/api/auth/admin/login', { email: normalizedIdentifier, password })
+      navigate('/admin/otp', { state: { adminId: normalizedIdentifier } })
+    } catch (e) {
+      setError(e?.response?.data?.message || 'Incorrect admin credentials. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -59,77 +50,29 @@ function AdminLogin() {
             </div>
           </div>
 
-          <Link
-            to="/"
-            className="font-medium text-slate-700 transition hover:text-emerald-600"
-          >
-            Home
-          </Link>
+          <Link to="/" className="font-medium text-slate-700 transition hover:text-emerald-600">Home</Link>
         </div>
       </nav>
 
       <main className="flex min-h-[calc(100vh-73px)] items-center justify-center px-6 py-16">
         <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
           <h1 className="text-3xl font-bold text-slate-900">Admin Login</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Sign in with your admin account. After successful login, an OTP
-            will be sent to your registered email for verification.
-          </p>
+          <p className="mt-3 text-sm leading-6 text-slate-600">Sign in with your admin account.</p>
 
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
             <div>
-              <label
-                htmlFor="identifier"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Admin Email or Username
-              </label>
-              <input
-                id="identifier"
-                type="text"
-                value={identifier}
-                onChange={(event) => {
-                  setIdentifier(event.target.value)
-                  if (error) {
-                    setError('')
-                  }
-                }}
-                placeholder="Enter admin email or username"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-              />
+              <label htmlFor="identifier" className="mb-2 block text-sm font-medium text-slate-700">Admin Email</label>
+              <input id="identifier" type="text" value={identifier} onChange={(e) => { setIdentifier(e.target.value); if (error) setError('') }} placeholder="Enter admin email" className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(event) => {
-                  setPassword(event.target.value)
-                  if (error) {
-                    setError('')
-                  }
-                }}
-                placeholder="Enter password"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-              />
+              <label htmlFor="password" className="mb-2 block text-sm font-medium text-slate-700">Password</label>
+              <input id="password" type="password" value={password} onChange={(e) => { setPassword(e.target.value); if (error) setError('') }} placeholder="Enter password" className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
             </div>
 
-            {error ? (
-              <p className="text-sm font-medium text-red-600">{error}</p>
-            ) : null}
+            {error ? (<p className="text-sm font-medium text-red-600">{error}</p>) : null}
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
-            >
+            <button type="submit" disabled={isLoading} className="flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300">
               {isLoading ? 'Authenticating...' : 'Login'}
             </button>
           </form>

@@ -10,23 +10,33 @@ const {
 
 async function createElection(req, res, next) {
   try {
-    const { state_id, title, start_time, end_time, status } = req.body;
+    const { state_id, title, status } = req.body;
     const state = await State.findById(state_id);
     if (!state) return res.status(404).json({ message: "State not found" });
+
+    // Auto-set a one-day window: starts in 5 minutes, ends 24 hours later.
+    const now = Date.now();
+    // Start immediately; run for 24 hours.
+    const startTime = now;
+    const endTime = startTime + 24 * 60 * 60 * 1000;
+
+    if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) {
+      return res.status(500).json({ message: "Failed to compute election window" });
+    }
 
     const { onChainId } = await createElectionOnChain({
       title,
       stateName: state.name,
-      startTime: start_time,
-      endTime: end_time,
+      startTime,
+      endTime,
     });
 
     const election = await Election.create({
       state_id,
       on_chain_id: onChainId,
       title,
-      start_time,
-      end_time,
+      start_time: startTime,
+      end_time: endTime,
       status: status || "scheduled",
       created_by_admin: req.user.email || "admin",
     });

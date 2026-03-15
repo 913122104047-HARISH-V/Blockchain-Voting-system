@@ -1,6 +1,6 @@
 module.exports = {
-  rpcUrl: process.env.BLOCKCHAIN_RPC_URL || "http://127.0.0.1:8545",
+  rpcUrl: process.env.BLOCKCHAIN_RPC_URL || "http://127.0.0.1:7545",
   contractAddress: process.env.VOTING_CONTRACT_ADDRESS || "",
-  chainId: Number(process.env.BLOCKCHAIN_CHAIN_ID || 1337),
+  chainId: Number(process.env.BLOCKCHAIN_CHAIN_ID || 5777),
   adminPrivateKey: process.env.BLOCKCHAIN_ADMIN_PRIVATE_KEY || "",
 };

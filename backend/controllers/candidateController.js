@@ -7,7 +7,7 @@ const { addCandidateOnChain } = require("../services/blockchainService");
 
 async function addCandidate(req, res, next) {
   try {
-    const { election_id, constituency_id, name, party_id, symbol, wallet_address } = req.body;
+    const { election_id, constituency_id, name, party_id } = req.body;
     const election = await Election.findById(election_id);
     if (!election) return res.status(404).json({ message: "Election not found" });
     if (!election.on_chain_id) {
@@ -27,12 +27,18 @@ async function addCandidate(req, res, next) {
       return res.status(400).json({ message: "Constituency is not synced on blockchain" });
     }
 
-    let partyName = "Independent";
-    if (party_id) {
-      const party = await Party.findById(party_id);
-      if (!party) return res.status(404).json({ message: "Party not found" });
-      partyName = party.name;
+    if (!party_id) {
+      return res.status(400).json({ message: "party_id is required" });
     }
+
+    const party = await Party.findById(party_id);
+    if (!party) return res.status(404).json({ message: "Party not found" });
+    if (String(party.election_id) !== String(election_id)) {
+      return res.status(400).json({ message: "Party does not belong to this election" });
+    }
+
+    const partyName = party.name;
+    const symbol = party.symbol || party.name;
 
     const { onChainId } = await addCandidateOnChain({
       electionOnChainId: election.on_chain_id,
@@ -46,9 +52,9 @@ async function addCandidate(req, res, next) {
       on_chain_id: onChainId,
       constituency_id,
       name,
-      party_id: party_id || null,
+      party_id,
       symbol,
-      wallet_address,
+      wallet_address: null,
       is_active: true,
     });
 

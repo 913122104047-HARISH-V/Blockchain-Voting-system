@@ -3,6 +3,7 @@ const Candidate = require("../models/Candidate");
 const Voter = require("../models/Voter");
 const WalletBinding = require("../models/WalletBinding");
 const Constituency = require("../models/Constituency");
+const State = require("../models/State");
 const { registerVoterOnChain } = require("../services/blockchainService");
 
 async function getVoterDashboard(req, res, next) {
@@ -14,13 +15,21 @@ async function getVoterDashboard(req, res, next) {
       return res.status(403).json({ message: "Complete KYC before accessing dashboard" });
     }
 
+    const constituency = await Constituency.findById(voter.constituency_id);
+    const state = await State.findById(req.user.stateId);
+    const voterResponse = {
+      ...voter.toObject(),
+      constituency: constituency ? constituency.name : null,
+      state: state ? state.name : req.user.stateId,
+    };
+
     const election = await Election.findOne({
       state_id: req.user.stateId,
       status: "active",
     }).sort({ start_time: -1 });
 
     if (!election) {
-      return res.json({ voter, election: null, candidates: [], wallet_binding: null });
+      return res.json({ voter: voterResponse, election: null, candidates: [], wallet_binding: null });
     }
 
     const candidates = await Candidate.find({
@@ -37,7 +46,7 @@ async function getVoterDashboard(req, res, next) {
     });
 
     return res.json({
-      voter,
+      voter: voterResponse,
       election,
       candidates,
       wallet_binding: walletBinding,

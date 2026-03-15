@@ -1,6 +1,16 @@
 const { ethers } = require("ethers");
 const blockchainConfig = require("../config/blockchain");
 
+const blockchainDisabled =
+  process.env.DISABLE_BLOCKCHAIN === "true" ||
+  !blockchainConfig.contractAddress ||
+  !blockchainConfig.adminPrivateKey;
+
+// Mock counters for disabled blockchain mode
+let mockElectionId = 1;
+let mockConstituencyId = 1;
+let mockCandidateId = 1;
+
 const votingAbi = [
   "function createElection(string title,string stateName,uint256 startTime,uint256 endTime) external",
   "function createConstituency(string name,string stateName) external",
@@ -21,6 +31,9 @@ let contract;
 let contractInterface;
 
 function assertBlockchainConfig() {
+  if (blockchainDisabled) {
+    return;
+  }
   if (!blockchainConfig.rpcUrl) {
     throw new Error("BLOCKCHAIN_RPC_URL is not configured");
   }
@@ -41,10 +54,15 @@ function getVotingContract() {
 
   assertBlockchainConfig();
 
-  provider = new ethers.JsonRpcProvider(blockchainConfig.rpcUrl, blockchainConfig.chainId);
+  if (blockchainDisabled) {
+    throw new Error("Blockchain interactions are disabled");
+  }
+
+  //provider = new ethers.JsonRpcProvider(blockchainConfig.rpcUrl, blockchainConfig.chainId);
+  provider = new ethers.JsonRpcProvider(blockchainConfig.rpcUrl);
   wallet = new ethers.Wallet(blockchainConfig.adminPrivateKey, provider);
-  contract = new ethers.Contract(blockchainConfig.contractAddress, votingAbi, wallet);
   contractInterface = new ethers.Interface(votingAbi);
+  contract = new ethers.Contract(blockchainConfig.contractAddress, votingAbi, wallet);
 
   return contract;
 }
@@ -54,8 +72,10 @@ function getProvider() {
     return provider;
   }
 
+  if (!provider) {
   getVotingContract();
-  return provider;
+}
+return provider;
 }
 
 function toUnixTimestamp(value) {
@@ -64,6 +84,9 @@ function toUnixTimestamp(value) {
 }
 
 async function createConstituencyOnChain({ name, stateName }) {
+  if (blockchainDisabled) {
+    return { txHash: "mock-tx", onChainId: mockConstituencyId++ };
+  }
   const votingContract = getVotingContract();
   const tx = await votingContract.createConstituency(name, stateName);
   await tx.wait();
@@ -76,13 +99,16 @@ async function createConstituencyOnChain({ name, stateName }) {
 }
 
 async function createElectionOnChain({ title, stateName, startTime, endTime }) {
+  if (blockchainDisabled) {
+    return { txHash: "mock-tx", onChainId: mockElectionId++ };
+  }
   const votingContract = getVotingContract();
-  const tx = await votingContract.createElection(
-    title,
-    stateName,
-    toUnixTimestamp(startTime),
-    toUnixTimestamp(endTime)
-  );
+  const startTs = toUnixTimestamp(startTime);
+  const endTs = toUnixTimestamp(endTime);
+  if (!Number.isFinite(startTs) || !Number.isFinite(endTs)) {
+    throw new Error("Invalid start/end time for election");
+  }
+  const tx = await votingContract.createElection(title, stateName, startTs, endTs);
   await tx.wait();
   const onChainId = Number(await votingContract.electionCounter());
 
@@ -98,6 +124,9 @@ async function addCandidateOnChain({
   partyName,
   constituencyOnChainId,
 }) {
+  if (blockchainDisabled) {
+    return { txHash: "mock-tx", onChainId: mockCandidateId++ };
+  }
   const votingContract = getVotingContract();
   const tx = await votingContract.addCandidate(
     electionOnChainId,
@@ -119,20 +148,48 @@ async function registerVoterOnChain({
   voterWalletAddress,
   constituencyOnChainId,
 }) {
-  const votingContract = getVotingContract();
-  const tx = await votingContract.registerVoter(
-    electionOnChainId,
-    voterWalletAddress,
-    constituencyOnChainId
-  );
-  await tx.wait();
+  if (!ethers.isAddress(voterWalletAddress)) {
+  throw new Error("Invalid wallet address");
+}
+  if (blockchainDisabled) {
+    return { txHash: "mock-tx" };
+  }
 
-  return {
-    txHash: tx.hash,
-  };
+  try {
+    const votingContract = getVotingContract();
+
+    const tx = await votingContract.registerVoter(
+      electionOnChainId,
+      voterWalletAddress,
+      constituencyOnChainId
+    );
+
+    const receipt = await tx.wait();
+
+    return {
+      txHash: tx.hash,
+      blockNumber: Number(receipt.blockNumber),
+    };
+
+  } catch (error) {
+    console.error("registerVoterOnChain error:", error);
+
+    if (error.reason) {
+      throw new Error(error.reason);
+    }
+
+    if (error.shortMessage) {
+      throw new Error(error.shortMessage);
+    }
+
+    throw new Error("Blockchain voter registration failed");
+  }
 }
 
 async function startElectionOnChain(electionOnChainId) {
+  if (blockchainDisabled) {
+    return { txHash: "mock-tx" };
+  }
   const votingContract = getVotingContract();
   const tx = await votingContract.startElection(electionOnChainId);
   await tx.wait();
@@ -143,6 +200,9 @@ async function startElectionOnChain(electionOnChainId) {
 }
 
 async function endElectionOnChain(electionOnChainId) {
+  if (blockchainDisabled) {
+    return { txHash: "mock-tx" };
+  }
   const votingContract = getVotingContract();
   const tx = await votingContract.endElection(electionOnChainId);
   await tx.wait();
@@ -153,6 +213,9 @@ async function endElectionOnChain(electionOnChainId) {
 }
 
 async function publishResultsOnChain(electionOnChainId) {
+  if (blockchainDisabled) {
+    return { txHash: "mock-tx" };
+  }
   const votingContract = getVotingContract();
   const tx = await votingContract.publishResults(electionOnChainId);
   await tx.wait();
@@ -163,6 +226,9 @@ async function publishResultsOnChain(electionOnChainId) {
 }
 
 async function getResultsByElection(electionOnChainId) {
+  if (blockchainDisabled) {
+    return [];
+  }
   const votingContract = getVotingContract();
   const candidates = await votingContract.getResults(electionOnChainId);
 
@@ -182,8 +248,14 @@ async function verifyVoteTransaction({
   candidateOnChainId,
   walletAddress,
 }) {
+  if (blockchainDisabled) {
+    throw new Error("Blockchain verification is disabled");
+  }
   if (!txHash) {
     throw new Error("tx_hash is required");
+  }
+  if (!contractInterface) {
+    getVotingContract();
   }
 
   const rpcProvider = getProvider();
@@ -205,10 +277,16 @@ async function verifyVoteTransaction({
     throw new Error("Transaction sender does not match the bound wallet");
   }
 
-  const parsed = contractInterface.parseTransaction({
+ let parsed;
+
+try {
+  parsed = contractInterface.parseTransaction({
     data: tx.data,
     value: tx.value,
   });
+} catch (err) {
+  throw new Error("Transaction data could not be decoded");
+}
 
   if (!parsed || parsed.name !== "vote") {
     throw new Error("Transaction is not a vote call");

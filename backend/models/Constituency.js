@@ -1,4 +1,4 @@
-const { Schema, model } = require("mongoose");
+import { Schema, model } from "mongoose";
 
 const constituencySchema = new Schema(
   {
@@ -15,4 +15,4 @@ const constituencySchema = new Schema(
 
 constituencySchema.index({ state_id: 1, name: 1 }, { unique: true });
 
-module.exports = model("Constituency", constituencySchema);
+export default model("Constituency", constituencySchema);

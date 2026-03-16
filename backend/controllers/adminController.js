@@ -1,11 +1,11 @@
-const State = require("../models/State");
-const Constituency = require("../models/Constituency");
-const Voter = require("../models/Voter");
-const Party = require("../models/Party");
-const { calculateMajorityMark } = require("../utils/majorityCalculator");
-const { hashAadhaar } = require("../utils/aadhaarHash");
-const { createConstituencyOnChain } = require("../services/blockchainService");
-const Election = require("../models/Election");
+import State from "../models/State.js";
+import Constituency from "../models/Constituency.js";
+import Voter from "../models/Voter.js";
+import Party from "../models/Party.js";
+import { calculateMajorityMark } from "../utils/majorityCalculator.js";
+import { hashAadhaar } from "../utils/aadhaarHash.js";
+import { createConstituencyOnChain } from "../services/blockchainService.js";
+import Election from "../models/Election.js";
 
 async function recalculateStateCounts(stateId) {
   const total = await Constituency.countDocuments({ state_id: stateId });
@@ -141,7 +141,7 @@ async function listParties(req, res, next) {
   }
 }
 
-module.exports = {
+export {
   createState,
   listStates,
   createConstituency,

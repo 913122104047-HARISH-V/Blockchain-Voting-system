@@ -1,6 +1,6 @@
-const Election = require("../models/Election");
-const { tallyElectionVotes } = require("../services/tallyService");
-const { publishResultsOnChain } = require("../services/blockchainService");
+import Election from "../models/Election.js";
+import { tallyElectionVotes } from "../services/tallyService.js";
+import { publishResultsOnChain } from "../services/blockchainService.js";
 
 async function getElectionResult(req, res, next) {
   try {
@@ -50,7 +50,7 @@ async function publishElectionResult(req, res, next) {
   }
 }
 
-module.exports = {
+export {
   getElectionResult,
   getLatestStateResult,
   publishElectionResult,

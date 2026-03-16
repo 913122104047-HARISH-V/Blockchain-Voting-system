@@ -1,4 +1,4 @@
-const { Schema, model } = require("mongoose");
+import { Schema, model } from "mongoose";
 
 const electionSchema = new Schema(
   {
@@ -21,4 +21,4 @@ const electionSchema = new Schema(
   }
 );
 
-module.exports = model("Election", electionSchema);
+export default model("Election", electionSchema);

@@ -1,10 +1,10 @@
-const jwt = require("jsonwebtoken");
-const Voter = require("../models/Voter");
-const Constituency = require("../models/Constituency");
-const VerificationLog = require("../models/VerificationLog");
-const { hashAadhaar } = require("../utils/aadhaarHash");
-const { generateOtp, verifyOtp } = require("../services/otpService");
-const { verifyFace } = require("../services/faceVerificationService");
+import jwt from "jsonwebtoken";
+import Voter from "../models/Voter.js";
+import Constituency from "../models/Constituency.js";
+import VerificationLog from "../models/VerificationLog.js";
+import { hashAadhaar } from "../utils/aadhaarHash.js";
+import { generateOtp, verifyOtp } from "../services/otpService.js";
+import { verifyFace } from "../services/faceVerificationService.js";
 
 function getJwtSecret() {
   // Fall back to a static secret to avoid runtime errors in dev/demo mode.
@@ -63,10 +63,14 @@ async function verifyAdminOtpAndFace(req, res, next) {
 async function voterInitLogin(req, res, next) {
   try {
     const { aadhaar_number } = req.body;
+    const normalized = String(aadhaar_number || "").trim();
     const voter = await Voter.findOne({
-      aadhaar_number,
       is_active: true,
       voter_status: "eligible",
+      $or: [
+        { aadhaar_number: normalized },
+        { aadhaar_hash: normalized ? hashAadhaar(normalized) : null },
+      ],
     });
 
     if (!voter) {
@@ -129,7 +133,7 @@ async function verifyVoterOtpAndFace(req, res, next) {
   }
 }
 
-module.exports = {
+export {
   adminLogin,
   verifyAdminOtpAndFace,
   voterInitLogin,

@@ -1,8 +1,9 @@
-require("dotenv").config();
+import dotenv from "dotenv";
+import app from "./app.js";
+import { connectDB } from "./config/db.js";
+import logger from "./utils/logger.js";
 
-const app = require("./app");
-const { connectDB } = require("./config/db");
-const logger = require("./utils/logger");
+dotenv.config();
 
 const PORT = Number(process.env.PORT || 5000);
 

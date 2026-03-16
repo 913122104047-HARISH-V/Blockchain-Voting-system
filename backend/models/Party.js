@@ -1,4 +1,4 @@
-const { Schema, model } = require("mongoose");
+import { Schema, model } from "mongoose";
 
 const partySchema = new Schema(
   {
@@ -14,4 +14,4 @@ const partySchema = new Schema(
 
 partySchema.index({ election_id: 1, name: 1 }, { unique: true });
 
-module.exports = model("Party", partySchema);
+export default model("Party", partySchema);

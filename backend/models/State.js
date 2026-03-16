@@ -1,4 +1,4 @@
-const { Schema, model } = require("mongoose");
+import { Schema, model } from "mongoose";
 
 const stateSchema = new Schema(
   {
@@ -12,4 +12,4 @@ const stateSchema = new Schema(
   }
 );
 
-module.exports = model("State", stateSchema);
+export default model("State", stateSchema);

@@ -1,9 +1,9 @@
-const Candidate = require("../models/Candidate");
-const Election = require("../models/Election");
-const ElectionConstituency = require("../models/ElectionConstituency");
-const Party = require("../models/Party");
-const Constituency = require("../models/Constituency");
-const { addCandidateOnChain } = require("../services/blockchainService");
+import Candidate from "../models/Candidate.js";
+import Election from "../models/Election.js";
+import ElectionConstituency from "../models/ElectionConstituency.js";
+import Party from "../models/Party.js";
+import Constituency from "../models/Constituency.js";
+import { addCandidateOnChain } from "../services/blockchainService.js";
 
 async function addCandidate(req, res, next) {
   try {
@@ -80,7 +80,7 @@ async function listCandidates(req, res, next) {
   }
 }
 
-module.exports = {
+export {
   addCandidate,
   listCandidates,
 };

@@ -1,4 +1,4 @@
-const { Schema, model } = require("mongoose");
+import { Schema, model } from "mongoose";
 
 const verificationLogSchema = new Schema(
   {
@@ -15,4 +15,4 @@ const verificationLogSchema = new Schema(
   }
 );
 
-module.exports = model("VerificationLog", verificationLogSchema);
+export default model("VerificationLog", verificationLogSchema);

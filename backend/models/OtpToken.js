@@ -1,4 +1,4 @@
-const { Schema, model } = require("mongoose");
+import { Schema, model } from "mongoose";
 
 const otpTokenSchema = new Schema(
   {
@@ -17,4 +17,4 @@ const otpTokenSchema = new Schema(
 otpTokenSchema.index({ scope: 1, subject_id: 1 }, { unique: true });
 otpTokenSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 });
 
-module.exports = model("OtpToken", otpTokenSchema);
+export default model("OtpToken", otpTokenSchema);

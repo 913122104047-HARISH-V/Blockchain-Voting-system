@@ -1,7 +1,7 @@
-const Election = require("../models/Election");
-const Candidate = require("../models/Candidate");
-const WalletBinding = require("../models/WalletBinding");
-const { verifyVoteTransaction } = require("../services/blockchainService");
+import Election from "../models/Election.js";
+import Candidate from "../models/Candidate.js";
+import WalletBinding from "../models/WalletBinding.js";
+import { verifyVoteTransaction } from "../services/blockchainService.js";
 
 async function submitVote(req, res, next) {
   try {
@@ -69,6 +69,4 @@ async function submitVote(req, res, next) {
   }
 }
 
-module.exports = {
-  submitVote,
-};
+export { submitVote };

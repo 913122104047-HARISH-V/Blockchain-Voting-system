@@ -1,11 +1,11 @@
-const express = require("express");
-const { addCandidate, listCandidates } = require("../controllers/candidateController");
-const { authRequired } = require("../middleware/authMiddleware");
-const { adminOnly } = require("../middleware/adminMiddleware");
+import express from "express";
+import { addCandidate, listCandidates } from "../controllers/candidateController.js";
+import { authRequired } from "../middleware/authMiddleware.js";
+import { adminOnly } from "../middleware/adminMiddleware.js";
 
 const router = express.Router();
 
 router.get("/", listCandidates);
 router.post("/", authRequired, adminOnly, addCandidate);
 
-module.exports = router;
+export default router;

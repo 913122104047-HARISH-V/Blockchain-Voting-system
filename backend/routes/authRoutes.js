@@ -1,10 +1,10 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   adminLogin,
   verifyAdminOtpAndFace,
   voterInitLogin,
   verifyVoterOtpAndFace,
-} = require("../controllers/authController");
+} from "../controllers/authController.js";
 
 const router = express.Router();
 
@@ -13,4 +13,4 @@ router.post("/admin/verify", verifyAdminOtpAndFace);
 router.post("/voter/login", voterInitLogin);
 router.post("/voter/verify", verifyVoterOtpAndFace);
 
-module.exports = router;
+export default router;

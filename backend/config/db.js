@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
-async function connectDB() {
+export async function connectDB() {
   try {
     const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/blockchain_voting";
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
@@ -10,4 +10,4 @@ async function connectDB() {
   }
 }
 
-module.exports = { mongoose, connectDB };
+export { mongoose };

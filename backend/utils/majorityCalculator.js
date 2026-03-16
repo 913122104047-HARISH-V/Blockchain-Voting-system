@@ -6,6 +6,4 @@ function calculateMajorityMark(totalConstituencies) {
   return Math.floor(total / 2) + 1;
 }
 
-module.exports = {
-  calculateMajorityMark,
-};
+export { calculateMajorityMark };

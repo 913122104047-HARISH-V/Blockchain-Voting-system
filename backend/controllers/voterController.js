@@ -1,14 +1,23 @@
-const Election = require("../models/Election");
-const Candidate = require("../models/Candidate");
-const Voter = require("../models/Voter");
-const WalletBinding = require("../models/WalletBinding");
-const Constituency = require("../models/Constituency");
-const State = require("../models/State");
-const { registerVoterOnChain } = require("../services/blockchainService");
+import Election from "../models/Election.js";
+import Candidate from "../models/Candidate.js";
+import Voter from "../models/Voter.js";
+import WalletBinding from "../models/WalletBinding.js";
+import Constituency from "../models/Constituency.js";
+import State from "../models/State.js";
+import { registerVoterOnChain } from "../services/blockchainService.js";
 
 async function getVoterDashboard(req, res, next) {
   try {
-    const voterId = req.user.voterId;
+    const voterId =
+      req.user?.voterId ||
+      req.user?._id ||
+      req.body?.voter_id ||
+      req.query?.voter_id;
+
+    if (!voterId) {
+      return res.status(400).json({ message: "voter_id is required" });
+    }
+
     const voter = await Voter.findById(voterId);
     if (!voter) return res.status(404).json({ message: "Voter not found" });
     if (!voter.hasCompletedKYC) {
@@ -16,25 +25,30 @@ async function getVoterDashboard(req, res, next) {
     }
 
     const constituency = await Constituency.findById(voter.constituency_id);
-    const state = await State.findById(req.user.stateId);
+    const state = await State.findById(req.user?.stateId || constituency?.state_id);
     const voterResponse = {
       ...voter.toObject(),
       constituency: constituency ? constituency.name : null,
       state: state ? state.name : req.user.stateId,
     };
 
-    const election = await Election.findOne({
-      state_id: req.user.stateId,
-      status: "active",
-    }).sort({ start_time: -1 });
+    const electionFilter = { status: "active" };
+    const stateIdForQuery = req.user?.stateId || constituency?.state_id;
+    if (stateIdForQuery) {
+      electionFilter.state_id = stateIdForQuery;
+    }
+
+    const election = await Election.findOne(electionFilter).sort({ start_time: -1 });
 
     if (!election) {
       return res.json({ voter: voterResponse, election: null, candidates: [], wallet_binding: null });
     }
 
+    const constituencyIdForQuery = req.user?.constituencyId || voter.constituency_id;
+
     const candidates = await Candidate.find({
       election_id: election._id,
-      constituency_id: req.user.constituencyId,
+      constituency_id: constituencyIdForQuery,
       is_active: true,
     })
       .populate("party_id", "name symbol")
@@ -58,8 +72,14 @@ async function getVoterDashboard(req, res, next) {
 
 async function bindWallet(req, res, next) {
   try {
-    const voterId = req.user.voterId;
+    const voterId =
+      req.user?.voterId ||
+      req.body?.voter_id ||
+      req.query?.voter_id;
     const { wallet_address } = req.body;
+    if (!voterId) {
+      return res.status(400).json({ message: "voter_id or auth token is required" });
+    }
     if (!wallet_address) return res.status(400).json({ message: "wallet_address is required" });
 
     const normalized = wallet_address.toLowerCase();
@@ -70,6 +90,7 @@ async function bindWallet(req, res, next) {
     if (!constituency) {
       return res.status(404).json({ message: "Constituency not found for voter" });
     }
+    const stateId = req.user?.stateId || constituency.state_id;
 
     const existing = await WalletBinding.findOne({ voter_id: voterId, is_primary: true });
     let walletBinding;
@@ -87,7 +108,7 @@ async function bindWallet(req, res, next) {
     }
 
     const activeElections = await Election.find({
-      state_id: req.user.stateId,
+      state_id: stateId,
       status: { $in: ["scheduled", "active"] },
       on_chain_id: { $ne: null },
     });
@@ -108,7 +129,7 @@ async function bindWallet(req, res, next) {
   }
 }
 
-module.exports = {
+export {
   getVoterDashboard,
   bindWallet,
 };

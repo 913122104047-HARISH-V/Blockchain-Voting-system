@@ -1,12 +1,12 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   createElection,
   listElections,
   updateElectionStatus,
   getActiveElectionForState,
-} = require("../controllers/electionController");
-const { authRequired } = require("../middleware/authMiddleware");
-const { adminOnly } = require("../middleware/adminMiddleware");
+} from "../controllers/electionController.js";
+import { authRequired } from "../middleware/authMiddleware.js";
+import { adminOnly } from "../middleware/adminMiddleware.js";
 
 const router = express.Router();
 
@@ -15,4 +15,4 @@ router.get("/active/:stateId", getActiveElectionForState);
 router.post("/", authRequired, adminOnly, createElection);
 router.patch("/:id/status", authRequired, adminOnly, updateElectionStatus);
 
-module.exports = router;
+export default router;

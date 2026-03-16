@@ -1,5 +1,5 @@
-const crypto = require("crypto");
-const OtpToken = require("../models/OtpToken");
+import crypto from "crypto";
+import OtpToken from "../models/OtpToken.js";
 
 const OTP_TTL_MS = Number(process.env.OTP_TTL_MS || 5 * 60 * 1000);
 const STATIC_OTP = process.env.STATIC_OTP || "123456";
@@ -57,7 +57,7 @@ async function verifyOtp(scope, id, submittedOtp) {
   return ok;
 }
 
-module.exports = {
+export {
   generateOtp,
   verifyOtp,
 };

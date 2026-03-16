@@ -1,4 +1,4 @@
-const { Schema, model } = require("mongoose");
+import { Schema, model } from "mongoose";
 
 const walletBindingSchema = new Schema(
   {
@@ -16,4 +16,4 @@ const walletBindingSchema = new Schema(
 
 walletBindingSchema.index({ voter_id: 1, is_primary: 1 }, { unique: true });
 
-module.exports = model("WalletBinding", walletBindingSchema);
+export default model("WalletBinding", walletBindingSchema);

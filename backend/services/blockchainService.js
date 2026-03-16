@@ -1,5 +1,5 @@
-const { ethers } = require("ethers");
-const blockchainConfig = require("../config/blockchain");
+import { ethers } from "ethers";
+import blockchainConfig from "../config/blockchain.js";
 
 const blockchainDisabled =
   process.env.DISABLE_BLOCKCHAIN === "true" ||
@@ -37,20 +37,16 @@ function assertBlockchainConfig() {
   if (!blockchainConfig.rpcUrl) {
     throw new Error("BLOCKCHAIN_RPC_URL is not configured");
   }
-
   if (!blockchainConfig.contractAddress) {
     throw new Error("VOTING_CONTRACT_ADDRESS is not configured");
   }
-
   if (!blockchainConfig.adminPrivateKey) {
     throw new Error("BLOCKCHAIN_ADMIN_PRIVATE_KEY is not configured");
   }
 }
 
 function getVotingContract() {
-  if (contract) {
-    return contract;
-  }
+  if (contract) return contract;
 
   assertBlockchainConfig();
 
@@ -58,8 +54,7 @@ function getVotingContract() {
     throw new Error("Blockchain interactions are disabled");
   }
 
-  //provider = new ethers.JsonRpcProvider(blockchainConfig.rpcUrl, blockchainConfig.chainId);
-  provider = new ethers.JsonRpcProvider(blockchainConfig.rpcUrl);
+  provider = new ethers.JsonRpcProvider(blockchainConfig.rpcUrl, blockchainConfig.chainId);
   wallet = new ethers.Wallet(blockchainConfig.adminPrivateKey, provider);
   contractInterface = new ethers.Interface(votingAbi);
   contract = new ethers.Contract(blockchainConfig.contractAddress, votingAbi, wallet);
@@ -68,14 +63,9 @@ function getVotingContract() {
 }
 
 function getProvider() {
-  if (provider) {
-    return provider;
-  }
-
-  if (!provider) {
+  if (provider) return provider;
   getVotingContract();
-}
-return provider;
+  return provider;
 }
 
 function toUnixTimestamp(value) {
@@ -83,50 +73,33 @@ function toUnixTimestamp(value) {
   return Math.floor(date.getTime() / 1000);
 }
 
-async function createConstituencyOnChain({ name, stateName }) {
-  if (blockchainDisabled) {
-    return { txHash: "mock-tx", onChainId: mockConstituencyId++ };
-  }
+export async function createConstituencyOnChain({ name, stateName }) {
+  if (blockchainDisabled) return { txHash: "mock-tx", onChainId: mockConstituencyId++ };
   const votingContract = getVotingContract();
   const tx = await votingContract.createConstituency(name, stateName);
   await tx.wait();
   const onChainId = Number(await votingContract.constituencyCounter());
-
-  return {
-    txHash: tx.hash,
-    onChainId,
-  };
+  return { txHash: tx.hash, onChainId };
 }
 
-async function createElectionOnChain({ title, stateName, startTime, endTime }) {
-  if (blockchainDisabled) {
-    return { txHash: "mock-tx", onChainId: mockElectionId++ };
-  }
+export async function createElectionOnChain({ title, stateName, startTime, endTime }) {
+  if (blockchainDisabled) return { txHash: "mock-tx", onChainId: mockElectionId++ };
   const votingContract = getVotingContract();
   const startTs = toUnixTimestamp(startTime);
   const endTs = toUnixTimestamp(endTime);
-  if (!Number.isFinite(startTs) || !Number.isFinite(endTs)) {
-    throw new Error("Invalid start/end time for election");
-  }
   const tx = await votingContract.createElection(title, stateName, startTs, endTs);
   await tx.wait();
   const onChainId = Number(await votingContract.electionCounter());
-
-  return {
-    txHash: tx.hash,
-    onChainId,
-  };
+  return { txHash: tx.hash, onChainId };
 }
 
-async function addCandidateOnChain({
+export async function addCandidateOnChain({
   electionOnChainId,
   candidateName,
   partyName,
   constituencyOnChainId,
 }) {
-  if (blockchainDisabled) {
-    return { txHash: "mock-tx", onChainId: mockCandidateId++ };
-  }
+  if (blockchainDisabled) return { txHash: "mock-tx", onChainId: mockCandidateId++ };
   const votingContract = getVotingContract();
   const tx = await votingContract.addCandidate(
     electionOnChainId,
@@ -136,102 +109,55 @@ async function addCandidateOnChain({
   );
   await tx.wait();
   const onChainId = Number(await votingContract.candidateCounter());
-
-  return {
-    txHash: tx.hash,
-    onChainId,
-  };
+  return { txHash: tx.hash, onChainId };
 }
 
-async function registerVoterOnChain({
+export async function registerVoterOnChain({
   electionOnChainId,
   voterWalletAddress,
   constituencyOnChainId,
 }) {
-  if (!ethers.isAddress(voterWalletAddress)) {
-  throw new Error("Invalid wallet address");
-}
-  if (blockchainDisabled) {
-    return { txHash: "mock-tx" };
-  }
+  if (!ethers.isAddress(voterWalletAddress)) throw new Error("Invalid wallet address");
+  if (blockchainDisabled) return { txHash: "mock-tx" };
 
-  try {
-    const votingContract = getVotingContract();
-
-    const tx = await votingContract.registerVoter(
-      electionOnChainId,
-      voterWalletAddress,
-      constituencyOnChainId
-    );
-
-    const receipt = await tx.wait();
-
-    return {
-      txHash: tx.hash,
-      blockNumber: Number(receipt.blockNumber),
-    };
-
-  } catch (error) {
-    console.error("registerVoterOnChain error:", error);
-
-    if (error.reason) {
-      throw new Error(error.reason);
-    }
-
-    if (error.shortMessage) {
-      throw new Error(error.shortMessage);
-    }
-
-    throw new Error("Blockchain voter registration failed");
-  }
+  const votingContract = getVotingContract();
+  const tx = await votingContract.registerVoter(
+    electionOnChainId,
+    voterWalletAddress,
+    constituencyOnChainId
+  );
+  const receipt = await tx.wait();
+  return { txHash: tx.hash, blockNumber: Number(receipt.blockNumber) };
 }
 
-async function startElectionOnChain(electionOnChainId) {
-  if (blockchainDisabled) {
-    return { txHash: "mock-tx" };
-  }
+export async function startElectionOnChain(electionOnChainId) {
+  if (blockchainDisabled) return { txHash: "mock-tx" };
   const votingContract = getVotingContract();
   const tx = await votingContract.startElection(electionOnChainId);
   await tx.wait();
-
-  return {
-    txHash: tx.hash,
-  };
+  return { txHash: tx.hash };
 }
 
-async function endElectionOnChain(electionOnChainId) {
-  if (blockchainDisabled) {
-    return { txHash: "mock-tx" };
-  }
+export async function endElectionOnChain(electionOnChainId) {
+  if (blockchainDisabled) return { txHash: "mock-tx" };
   const votingContract = getVotingContract();
   const tx = await votingContract.endElection(electionOnChainId);
   await tx.wait();
-
-  return {
-    txHash: tx.hash,
-  };
+  return { txHash: tx.hash };
 }
 
-async function publishResultsOnChain(electionOnChainId) {
-  if (blockchainDisabled) {
-    return { txHash: "mock-tx" };
-  }
+export async function publishResultsOnChain(electionOnChainId) {
+  if (blockchainDisabled) return { txHash: "mock-tx" };
   const votingContract = getVotingContract();
   const tx = await votingContract.publishResults(electionOnChainId);
   await tx.wait();
-
-  return {
-    txHash: tx.hash,
-  };
+  return { txHash: tx.hash };
 }
 
-async function getResultsByElection(electionOnChainId) {
-  if (blockchainDisabled) {
-    return [];
-  }
+export async function getResultsByElection(electionOnChainId) {
+  if (blockchainDisabled) return [];
   const votingContract = getVotingContract();
   const candidates = await votingContract.getResults(electionOnChainId);
-
   return candidates.map((candidate) => ({
     id: Number(candidate.id),
     name: candidate.name,
@@ -242,7 +168,7 @@ async function getResultsByElection(electionOnChainId) {
   }));
 }
 
-async function verifyVoteTransaction({
+export async function verifyVoteTransaction({
   txHash,
   electionOnChainId,
   candidateOnChainId,
@@ -260,14 +186,10 @@ async function verifyVoteTransaction({
 
   const rpcProvider = getProvider();
   const tx = await rpcProvider.getTransaction(txHash);
-  if (!tx) {
-    throw new Error("Transaction not found");
-  }
+  if (!tx) throw new Error("Transaction not found");
 
   const receipt = await rpcProvider.getTransactionReceipt(txHash);
-  if (!receipt || receipt.status !== 1n) {
-    throw new Error("Transaction not confirmed successfully");
-  }
+  if (!receipt || receipt.status !== 1n) throw new Error("Transaction not confirmed successfully");
 
   if (!tx.to || tx.to.toLowerCase() !== blockchainConfig.contractAddress.toLowerCase()) {
     throw new Error("Transaction was not sent to the voting contract");
@@ -277,16 +199,12 @@ async function verifyVoteTransaction({
     throw new Error("Transaction sender does not match the bound wallet");
   }
 
- let parsed;
-
-try {
-  parsed = contractInterface.parseTransaction({
-    data: tx.data,
-    value: tx.value,
-  });
-} catch (err) {
-  throw new Error("Transaction data could not be decoded");
-}
+  let parsed;
+  try {
+    parsed = contractInterface.parseTransaction({ data: tx.data, value: tx.value });
+  } catch (err) {
+    throw new Error("Transaction data could not be decoded");
+  }
 
   if (!parsed || parsed.name !== "vote") {
     throw new Error("Transaction is not a vote call");
@@ -296,25 +214,9 @@ try {
   if (Number(electionIdArg) !== Number(electionOnChainId)) {
     throw new Error("Transaction election id does not match");
   }
-
   if (Number(candidateIdArg) !== Number(candidateOnChainId)) {
     throw new Error("Transaction candidate id does not match");
   }
 
-  return {
-    blockNumber: Number(receipt.blockNumber),
-    txHash,
-  };
+  return { blockNumber: Number(receipt.blockNumber), txHash };
 }
-
-module.exports = {
-  createConstituencyOnChain,
-  createElectionOnChain,
-  addCandidateOnChain,
-  registerVoterOnChain,
-  startElectionOnChain,
-  endElectionOnChain,
-  publishResultsOnChain,
-  getResultsByElection,
-  verifyVoteTransaction,
-};

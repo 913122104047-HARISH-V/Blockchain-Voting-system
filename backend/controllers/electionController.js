@@ -1,12 +1,12 @@
-const State = require("../models/State");
-const Election = require("../models/Election");
-const Constituency = require("../models/Constituency");
-const ElectionConstituency = require("../models/ElectionConstituency");
-const {
+import State from "../models/State.js";
+import Election from "../models/Election.js";
+import Constituency from "../models/Constituency.js";
+import ElectionConstituency from "../models/ElectionConstituency.js";
+import {
   createElectionOnChain,
   startElectionOnChain,
   endElectionOnChain,
-} = require("../services/blockchainService");
+} from "../services/blockchainService.js";
 
 async function createElection(req, res, next) {
   try {
@@ -136,7 +136,7 @@ async function getActiveElectionForState(req, res, next) {
   }
 }
 
-module.exports = {
+export {
   createElection,
   listElections,
   updateElectionStatus,

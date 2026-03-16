@@ -1,5 +1,5 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   createState,
   listStates,
   createConstituency,
@@ -7,9 +7,9 @@ const {
   addPermanentVoter,
   createParty,
   listParties,
-} = require("../controllers/adminController");
-const { authRequired } = require("../middleware/authMiddleware");
-const { adminOnly } = require("../middleware/adminMiddleware");
+} from "../controllers/adminController.js";
+import { authRequired } from "../middleware/authMiddleware.js";
+import { adminOnly } from "../middleware/adminMiddleware.js";
 
 const router = express.Router();
 
@@ -23,4 +23,4 @@ router.post("/voters", addPermanentVoter);
 router.post("/parties", createParty);
 router.get("/parties", listParties);
 
-module.exports = router;
+export default router;

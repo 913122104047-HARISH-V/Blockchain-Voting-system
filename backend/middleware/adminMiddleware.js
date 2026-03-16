@@ -5,6 +5,4 @@ function adminOnly(req, res, next) {
   return next();
 }
 
-module.exports = {
-  adminOnly,
-};
+export { adminOnly };

@@ -1,7 +1,7 @@
-const Candidate = require("../models/Candidate");
-const Election = require("../models/Election");
-const State = require("../models/State");
-const { getResultsByElection } = require("./blockchainService");
+import Candidate from "../models/Candidate.js";
+import Election from "../models/Election.js";
+import State from "../models/State.js";
+import { getResultsByElection } from "./blockchainService.js";
 
 async function tallyElectionVotes(electionId) {
   const election = await Election.findById(electionId);
@@ -76,6 +76,4 @@ async function tallyElectionVotes(electionId) {
   };
 }
 
-module.exports = {
-  tallyElectionVotes,
-};
+export { tallyElectionVotes };

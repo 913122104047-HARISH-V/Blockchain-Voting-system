@@ -1,14 +1,14 @@
-const express = require("express");
-const cors = require("cors");
+import express from "express";
+import cors from "cors";
 
-const authRoutes = require("./routes/authRoutes");
-const adminRoutes = require("./routes/adminRoutes");
-const electionRoutes = require("./routes/electionRoutes");
-const candidateRoutes = require("./routes/candidateRoutes");
-const voterRoutes = require("./routes/voterRoutes");
-const voteRoutes = require("./routes/voteRoutes");
-const resultRoutes = require("./routes/resultRoutes");
-const { notFound, errorHandler } = require("./middleware/errorMiddleware");
+import authRoutes from "./routes/authRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import electionRoutes from "./routes/electionRoutes.js";
+import candidateRoutes from "./routes/candidateRoutes.js";
+import voterRoutes from "./routes/voterRoutes.js";
+import voteRoutes from "./routes/voteRoutes.js";
+import resultRoutes from "./routes/resultRoutes.js";
+import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 const app = express();
 
@@ -30,4 +30,4 @@ app.use("/api/results", resultRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

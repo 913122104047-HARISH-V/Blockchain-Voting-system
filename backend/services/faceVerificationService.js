@@ -4,6 +4,4 @@ function verifyFace({ inputFaceEmbedding, storedFaceEmbedding }) {
   return String(inputFaceEmbedding).trim() === String(storedFaceEmbedding).trim();
 }
 
-module.exports = {
-  verifyFace,
-};
+export { verifyFace };

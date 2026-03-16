@@ -1,10 +1,10 @@
-const express = require("express");
-const { submitVote } = require("../controllers/votingController");
-const { authRequired } = require("../middleware/authMiddleware");
-const { voterOnly } = require("../middleware/voterMiddleware");
+import express from "express";
+import { submitVote } from "../controllers/votingController.js";
+import { authRequired } from "../middleware/authMiddleware.js";
+import { voterOnly } from "../middleware/voterMiddleware.js";
 
 const router = express.Router();
 
 router.post("/", authRequired, voterOnly, submitVote);
 
-module.exports = router;
+export default router;

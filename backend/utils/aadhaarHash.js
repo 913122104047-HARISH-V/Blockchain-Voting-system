@@ -1,12 +1,8 @@
-const crypto = require("crypto");
+import crypto from "crypto";
 
-function hashAadhaar(aadhaarNumber) {
+export function hashAadhaar(aadhaarNumber) {
   if (!aadhaarNumber) {
     throw new Error("Aadhaar number is required");
   }
   return crypto.createHash("sha256").update(String(aadhaarNumber).trim()).digest("hex");
 }
-
-module.exports = {
-  hashAadhaar,
-};

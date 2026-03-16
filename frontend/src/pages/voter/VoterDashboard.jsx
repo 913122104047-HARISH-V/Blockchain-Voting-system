@@ -18,7 +18,8 @@ function VoterDashboard() {
     }
     (async () => {
       try {
-        const data = await getVoterDashboard()
+        const voterId = localStorage.getItem('voter_id')
+        const data = await getVoterDashboard(voterId)
         setDashboard(data)
        // setWalletAddress(data.wallet_binding?.wallet_address || '')
        if (data.wallet_binding?.wallet_address) {

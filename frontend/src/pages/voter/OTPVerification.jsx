@@ -69,6 +69,7 @@ function OTPVerification() {
       })
       if (token) {
         localStorage.setItem('voter_token', token)
+        localStorage.setItem('voter_id', location.state.voter_id)
         setError('')
         navigate('/voter/face-verification')
       } else {

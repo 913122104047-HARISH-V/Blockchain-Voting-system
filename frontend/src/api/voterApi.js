@@ -10,12 +10,15 @@ export async function verifyVoterOtp({ voter_id, otp, faceToken = 'voter-face-to
   return data
 }
 
-export async function getVoterDashboard() {
-  const { data } = await api.get('/api/voter/dashboard')
+export async function getVoterDashboard(voter_id) {
+  const id = voter_id || localStorage.getItem('voter_id')
+  const params = id ? { params: { voter_id: id } } : undefined
+  const { data } = await api.get('/api/voter/dashboard', params)
   return data
 }
 
 export async function bindWallet(wallet_address) {
-  const { data } = await api.post('/api/voter/bind-wallet', { wallet_address })
+  const voter_id = localStorage.getItem('voter_id')
+  const { data } = await api.post('/api/voter/bind-wallet', { wallet_address, voter_id })
   return data
 }

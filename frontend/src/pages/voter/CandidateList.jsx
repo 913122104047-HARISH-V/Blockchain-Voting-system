@@ -24,7 +24,8 @@ function CandidateList() {
     if (!dashboard.voter || !dashboard.election || !dashboard.candidates.length) {
       (async () => {
         try {
-          const data = await getVoterDashboard()
+          const voterId = localStorage.getItem('voter_id')
+          const data = await getVoterDashboard(voterId)
           setDashboard((d) => ({
             ...d,
             voter: data.voter,
@@ -43,6 +44,11 @@ function CandidateList() {
 
   const handleVote = async () => {
     if (!selectedCandidate || !dashboard.election) {
+      return
+    }
+
+    if (!dashboard.election.on_chain_id || !selectedCandidate.on_chain_id) {
+      setError('Voting is not available because on-chain mappings are missing for this election or candidate.')
       return
     }
 

@@ -1,42 +1,26 @@
 import nodemailer from "nodemailer";
 import logger from "../utils/logger.js";
 
-const smtpHost = process.env.SMTP_HOST;
-const smtpPort = Number(process.env.SMTP_PORT || 587);
-const smtpUser = process.env.SMTP_USER;
-const smtpPass = process.env.SMTP_PASS;
-const smtpFrom = process.env.SMTP_FROM || smtpUser;
-
-let transporter;
-
-function getTransporter() {
-  if (transporter) return transporter;
-  if (!smtpHost || !smtpUser || !smtpPass) {
-    throw new Error("SMTP credentials are not configured");
-  }
-  transporter = nodemailer.createTransport({
-    host: smtpHost,
-    port: smtpPort,
-    secure: smtpPort === 465,
+export async function sendEmail({ to, subject, text, html }) {
+  // ✅ Gmail transporter (no SMTP config)
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
     auth: {
-      user: smtpUser,
-      pass: smtpPass,
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS, // App Password
     },
   });
-  return transporter;
-}
 
-export async function sendEmail({ to, subject, text, html }) {
-  const tx = getTransporter();
   const mailOptions = {
-    from: smtpFrom,
+    from: process.env.EMAIL_USER,
     to,
     subject,
     text,
     html: html || text,
   };
+
   try {
-    const info = await tx.sendMail(mailOptions);
+    const info = await transporter.sendMail(mailOptions);
     logger.info("Email sent", { messageId: info.messageId, to });
     return info;
   } catch (err) {

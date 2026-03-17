@@ -5,6 +5,7 @@ import VerificationLog from "../models/VerificationLog.js";
 import { hashAadhaar } from "../utils/aadhaarHash.js";
 import { generateOtp, verifyOtp } from "../services/otpService.js";
 import { verifyFace } from "../services/faceVerificationService.js";
+import { sendEmail } from "../services/emailService.js";
 
 function getJwtSecret() {
   // Fall back to a static secret to avoid runtime errors in dev/demo mode.
@@ -26,7 +27,7 @@ function signToken(payload) {
 async function adminLogin(req, res, next) {
   try {
     const { email, password } = req.body;
-    const adminEmail = process.env.ADMIN_EMAIL || "admin123@gmail.com";
+    const adminEmail = process.env.ADMIN_EMAIL || "votingapplication004@gmail.com";
     const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
 
     if (email !== adminEmail || password !== adminPassword) {
@@ -34,6 +35,18 @@ async function adminLogin(req, res, next) {
     }
 
     const otp = await generateOtp("admin", email);
+
+    // Send OTP to the provided admin email
+    sendEmail({
+      to: email,
+      subject: "Your Admin OTP",
+      text: `Your OTP is ${otp}. It will expire in ${Math.floor(
+        Number(process.env.OTP_TTL_MS || 5 * 60 * 1000) / 1000
+      )} seconds.`,
+    }).catch((err) => {
+      console.error("Admin OTP email send failed", err?.message || err);
+    });
+
     return res.json(buildOtpResponse("OTP sent to admin email", otp));
   } catch (err) {
     return next(err);
@@ -78,6 +91,21 @@ async function voterInitLogin(req, res, next) {
     }
 
     const otp = await generateOtp("voter", voter._id.toString());
+
+    // fire-and-forget email sending; log but don't block login on mail failures
+    const recipient = voter.email || voter.mobile || null;
+    if (recipient) {
+      sendEmail({
+        to: voter.email,
+        subject: "Your BlockVote OTP",
+        text: `Your OTP is ${otp}. It will expire in ${Math.floor(
+          Number(process.env.OTP_TTL_MS || 5 * 60 * 1000) / 1000
+        )} seconds.`,
+      }).catch((err) => {
+        console.error("OTP email send failed", err?.message || err);
+      });
+    }
+
     return res.json({
       ...buildOtpResponse("OTP sent to registered contact", otp),
       voter_id: voter._id,

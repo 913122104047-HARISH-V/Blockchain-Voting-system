@@ -170,16 +170,18 @@ function Home() {
           <div>
             <h3 className="text-lg font-semibold text-white">Authors</h3>
             <p className="mt-3 text-sm leading-7 text-slate-300">
-              Add your team member names here.
+              <li>Alex Pandian M</li>
+              <li>Harish V</li>
+              <li>Linu Harish B</li>
             </p>
           </div>
 
           <div>
             <h3 className="text-lg font-semibold text-white">Contact</h3>
             <p className="mt-3 text-sm leading-7 text-slate-300">
-              Email: yourmail@example.com
+              Email: votingapplication004@gmail.com
               <br />
-              Phone: +91 98765 43210
+          
             </p>
           </div>
         </div>
